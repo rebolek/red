@@ -372,13 +372,18 @@ red: context [
 			emit idx
 			insert-lf -3
 		][
-			emit append to path! type actions/2
-			emit prefix-exec name
+			either actions/2 = 'push* [
+				emit append to path! type actions/2
+				emit second select/case symbols name
+			][
+				emit append to path! type actions/2
+				emit prefix-exec name
+			]
 			insert-lf -2
 		]
 	]
 	
-	emit-push-word: func [name [any-word!] original [any-word!] /local type ctx obj][
+	emit-push-word: func [name [any-word!] original [any-word!] /with actions /local type ctx obj][
 		type: to word! form type? name
 		name: to word! :name
 		
@@ -391,7 +396,7 @@ red: context [
 			emit get-word-index name					;@@ replace that 
 			insert-lf -3
 		][
-			emit-push-from name original type [push-local push]
+			emit-push-from name original type any [actions [push-local push]]
 		]
 	]
 	
@@ -1580,7 +1585,8 @@ red: context [
 				any-word? :value [
 					add-symbol name: to word! :value
 					either all [lit-word? :value not inactive][
-						emit-push-word :name :value
+?? value
+						emit-push-word/with :name :value [push-local push*]
 					][
 						emit-push-word :value :value
 					]

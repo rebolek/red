@@ -76,7 +76,7 @@ _context: context [
 		#if debug? = yes [if verbose > 0 [print-line "_context/add-global"]]
 
 		ctx: TO_CTX(global-ctx)
-		id: find-word ctx sym no
+		id: find-word ctx sym yes
 		s: as series! ctx/symbols/value
 		
 		if id <> -1 [return as red-word! s/offset + id]	;-- word already defined in global context
