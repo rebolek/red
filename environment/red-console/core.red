@@ -314,13 +314,16 @@ terminal!: object [
 		char: probe event/key
 		switch/default char [
 			#"^[" [									;-- ESCAPE key
+				probe "*** buffer is"
+				probe buffer
 				; switch to/from editing mode
 				system/console/edit-mode: select system/console/edit-modes system/console/edit-mode
 				unless system/console/edit-mode [system/console/edit-mode: first system/console/edit-modes]
 				switch-buffer
+				if equal? 'console system/console/edit-mode [exit-event-loop]
 				paint
 				probe rejoin ["mode: " system/console/edit-mode]
-				paint
+			;	paint
 			]
 			#"^M" [									;-- ENTER key
 				caret/visible?: no
@@ -376,18 +379,21 @@ terminal!: object [
 ; #BB additions
 
 	switch-buffer: does [
-		probe "switch-buffer"
+		probe "switch-buffer (store active)"
 		temp-buffer/lines: lines
 		temp-buffer/nlines: nlines
 		temp-buffer/heights: heights
 		temp-buffer/line: line
 
+		probe "going to active"
+		probe buffer
 		lines: buffer/lines
 		nlines: buffer/nlines
 		heights: buffer/heights
-		line: first lines ; FIXME: hack, can’t find where line is set
+		line: first buffer/lines ; FIXME: hack, can’t find where line is set
 
-		buffer: probe temp-buffer
+		probe "going to buffer"
+		buffer: make temp-buffer []
 	]
 
 	init-buffer: does [
