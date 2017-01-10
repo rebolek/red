@@ -35,9 +35,10 @@ terminal!: object [
 
 	scroll-y:	0
 
+	line-y:		0								;-- y offset of editing line
 	line-h:		0								;-- average line height
 	page-cnt:	0								;-- number of lines in one page
-	line-cnt:	0								;-- number of lines on screen (include wrapped lines)
+	line-cnt:	0								;-- number of lines in total (include wrapped lines)
 	delta-cnt:	0
 	screen-cnt: 0
 
@@ -45,6 +46,7 @@ terminal!: object [
 	caret:		none
 	scroller:	none
 	target:		none
+	tips:		none
 
 	draw: get 'system/view/platform/draw-face
 
@@ -120,7 +122,7 @@ terminal!: object [
 	resize: func [new-size [pair!] /local y][
 		y: new-size/y
 		new-size/x: new-size/x - 20
-		new-size/y: 0
+		new-size/y: y + line-h
 		box/size: new-size
 		if scroller [
 			page-cnt: y / line-h
@@ -131,7 +133,7 @@ terminal!: object [
 	scroll: func [event /local key n][
 		unless ask? [exit]
 		key: event/key
-		n: switch/default key [
+		n: switch/default key [ 
 			up			[1]
 			down		[-1]
 			page-up		[scroller/page-size]
@@ -165,10 +167,18 @@ terminal!: object [
 		]
 	]
 
-	move-caret: func [n /local ][
-		unless pair? n [n: as-pair n 0]
-		; x-movement
-		pos: pos + n/x
+	mouse-down: func [event [event!] /local offset][
+		offset: event/offset
+		if any [offset/y < line-y offset/y > (line-y + last heights)][exit]
+		box/text: head line
+		box/layout
+		pos: (box/index? offset) - (index? line)
+		if pos < 0 [pos: 0]
+		update-caret
+	]
+
+	move-caret: func [n][
+		pos: pos + n
 		if negative? pos [pos: 0]
 		if pos > length? line [pos: pos - n/x]
 		; y-movement
@@ -357,6 +367,7 @@ terminal!: object [
 			y: y + h
 			if y > end [break]
 		]
+		line-y: y - h
 		screen-cnt: y / line-h
 		update-caret
 		update-scroller line-cnt - num
@@ -405,6 +416,7 @@ console!: make face! [
 			face/rate: none
 		]
 		on-draw: func [face [object!] event [event!]][
+			probe "on-draw"
 			extra/paint
 		]
 		on-scroll: func [face [object!] event [event!]][
@@ -415,6 +427,9 @@ console!: make face! [
 		]
 		on-key: func [face [object!] event [event!]][
 			extra/press-key event
+		]
+		on-down: func [face [object!] event [event!]][
+			extra/mouse-down event
 		]
 		on-menu: func [face [object!] event [event!]][
 			switch event/picked [
