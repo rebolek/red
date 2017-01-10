@@ -147,10 +147,11 @@ terminal!: object [
 		]
 	]
 
-	update-caret: func [/local len n s h lh offset][
-		probe "*** update caret"
+	update-caret: func [/local p len n s h lh offset][
+		probe rejoin ["*** update caret"]
 		n: top
 		h: 0
+		p: min pos length? line
 		len: either equal? system/console/edit-mode 'console [
 			length? skip lines top
 		] [
@@ -160,8 +161,9 @@ terminal!: object [
 			h: h + pick heights n
 			n: n + 1
 		]
-		offset: probe box/offset? pos + index? line
+		offset: probe box/offset? p + index? line
 		offset/y: probe offset/y + h + scroll-y
+		; #BB: fix position for editor (rewrite later for shorter code)
 		if ask? [
 			either offset/y < target/size/y [
 				caret/offset: offset
