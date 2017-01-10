@@ -38,6 +38,9 @@ system/console: context [
 	count:	 [0 0 0]									;-- multiline counters for [squared curly parens]
 	ws:		 charset " ^/^M^-"
 
+	edit-mode:	'console 								;-- mode: console, insert, command #BB
+	edit-modes: [console insert] 						;-- TODO: command mode
+
 	gui?: #system [logic/box #either gui-console? = yes [yes][no]]
 	
 	read-argument: function [][
@@ -199,10 +202,18 @@ system/console: context [
 			]
 		]
 		forever [
-			eval-command ask any [
-				cue
-				all [string? set/any 'p do [prompt] :p]
-				form :p
+			prompt: rejoin [first form edit-mode "> "]
+			switch edit-mode [
+				console [
+					eval-command ask any [
+						cue
+						all [string? set/any 'p do [prompt] :p]
+						form :p
+					]
+				]
+				insert [
+					ask ""
+				]
 			]
 		]
 	]
@@ -261,3 +272,7 @@ cd:	function [
 
 dir:	:ls
 q: 		:quit
+
+; temporary commands #BB
+
+c: does [do %environment/red-console/red-console.red] ; shortcut for running red-console

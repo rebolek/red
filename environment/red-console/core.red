@@ -11,6 +11,20 @@ terminal!: object [
 	nlines:		make block! 1000				;-- line count of each line
 	heights:	make block! 1000				;-- height of each line
 
+	buffer:		make object! [					;-- #BB: reserve buffer when switching modes
+		lines:		make block! 1000
+		nlines:		make block! 1000
+		heights:	make block! 1000
+		line: 		none
+	]
+
+	temp-buffer:	make object! [				;-- #BB: temporary switching buffer
+		lines:		make block! 1000
+		nlines:		make block! 1000
+		heights:	make block! 1000
+		line: 		none
+	]
+
 	max-lines:	1000							;-- maximum size of the line buffer
 	full?:		no								;-- is line buffer full?
 	ask?:		no								;-- is it in ask loop
@@ -151,10 +165,24 @@ terminal!: object [
 		]
 	]
 
-	move-caret: func [n][
-		pos: pos + n
+	move-caret: func [n /local ][
+		unless pair? n [n: as-pair n 0]
+		; x-movement
+		pos: pos + n/x
 		if negative? pos [pos: 0]
-		if pos > length? line [pos: pos - n]
+		if pos > length? line [pos: pos - n/x]
+		; y-movement
+		unless zero? n/y [
+			probe rejoin [system/console/edit-mode "-move" n/y " line:" line]
+			probe mold lines
+			probe rejoin ["idx:" index? find lines line]
+			either negative? n/y [
+				; move up
+
+			] [
+				; move down
+			]
+		]
 	]
 
 	scroll-lines: func [delta /local n len cnt end offset][
@@ -273,8 +301,17 @@ terminal!: object [
 
 	press-key: func [event [event!] /local char][
 		if process-shortcuts event [exit]
-		char: event/key
+		char: probe event/key
 		switch/default char [
+			#"^[" [									;-- ESCAPE key
+				; switch to/from editing mode
+				system/console/edit-mode: select system/console/edit-modes system/console/edit-mode
+				unless system/console/edit-mode [system/console/edit-mode: first system/console/edit-modes]
+				switch-buffer
+				paint
+				probe rejoin ["mode: " system/console/edit-mode]
+				paint
+			]
 			#"^M" [									;-- ENTER key
 				caret/visible?: no
 				exit-event-loop
@@ -282,8 +319,8 @@ terminal!: object [
 			#"^H" [if pos <> 0 [pos: pos - 1 remove skip line pos]]
 			left  [move-caret -1]
 			right [move-caret 1]
-			up	  []
-			down  []
+			up	  [probe "up" move-caret 0x-1]
+			down  [probe "down" move-caret 0x1]
 		][
 			insert skip line pos char
 			pos: pos + 1
@@ -310,8 +347,10 @@ terminal!: object [
 
 			h: box/height
 			cnt: box/line-count
+			probe rejoin ["poke hei:" mold heights]
 			poke heights n h
 			line-cnt: line-cnt + cnt - pick nlines n
+			probe "poke nli"
 			poke nlines n cnt
 
 			n: n + 1
@@ -322,6 +361,34 @@ terminal!: object [
 		update-caret
 		update-scroller line-cnt - num
 	]
+
+; #BB additions
+
+	switch-buffer: does [
+		probe "switch-buffer"
+		temp-buffer/lines: lines
+		temp-buffer/nlines: nlines
+		temp-buffer/heights: heights
+		temp-buffer/line: line
+
+		lines: buffer/lines
+		nlines: buffer/nlines
+		heights: buffer/heights
+		line: first lines ; FIXME: hack, can’t find where line is set
+
+		buffer: probe temp-buffer
+	]
+
+	init-buffer: does [
+		insert buffer/lines make string! 1000
+		insert buffer/nlines 1
+		insert buffer/heights 17 ; FIXME: some hardcoded value to make it work
+	]
+
+	init-buffer
+
+; /BB additions
+
 ]
 
 console!: make face! [
