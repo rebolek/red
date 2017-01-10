@@ -148,15 +148,20 @@ terminal!: object [
 	]
 
 	update-caret: func [/local len n s h lh offset][
+		probe "*** update caret"
 		n: top
 		h: 0
-		len: length? skip lines top
+		len: either equal? system/console/edit-mode 'console [
+			length? skip lines top
+		] [
+			-1 + index? find lines line
+		]
 		loop len [
 			h: h + pick heights n
 			n: n + 1
 		]
-		offset: box/offset? pos + index? line
-		offset/y: offset/y + h + scroll-y
+		offset: probe box/offset? pos + index? line
+		offset/y: probe offset/y + h + scroll-y
 		if ask? [
 			either offset/y < target/size/y [
 				caret/offset: offset
@@ -177,20 +182,25 @@ terminal!: object [
 		update-caret
 	]
 
-	move-caret: func [n][
-		pos: pos + n
+	move-caret: func [n /local i][
+		unless pair? n [n: as-pair n 0]
+		pos: pos + n/x
 		if negative? pos [pos: 0]
 		if pos > length? line [pos: pos - n/x]
 		; y-movement
 		unless zero? n/y [
-			probe rejoin [system/console/edit-mode "-move" n/y " line:" line]
+			i: index? find lines line
+			probe rejoin [update-caret "-move" n/y " line:" line]
 			probe mold lines
-			probe rejoin ["idx:" index? find lines line]
-			either negative? n/y [
+			probe rejoin ["idx:" i]
+			either negative? probe n/y [
 				; move up
-
+				i: max 1 i - 1
+				line: pick lines i
 			] [
 				; move down
+				i: min length? lines i + 1
+				line: pick lines i
 			]
 		]
 	]
@@ -360,10 +370,8 @@ terminal!: object [
 
 			h: box/height
 			cnt: box/line-count
-			probe rejoin ["poke hei:" mold heights]
 			poke heights n h
 			line-cnt: line-cnt + cnt - pick nlines n
-			probe "poke nli"
 			poke nlines n cnt
 
 			n: n + 1
@@ -379,20 +387,16 @@ terminal!: object [
 ; #BB additions
 
 	switch-buffer: does [
-		probe "switch-buffer (store active)"
 		temp-buffer/lines: lines
 		temp-buffer/nlines: nlines
 		temp-buffer/heights: heights
 		temp-buffer/line: line
 
-		probe "going to active"
-		probe buffer
 		lines: buffer/lines
 		nlines: buffer/nlines
 		heights: buffer/heights
 		line: first buffer/lines ; FIXME: hack, can’t find where line is set
 
-		probe "going to buffer"
 		buffer: make temp-buffer []
 	]
 
