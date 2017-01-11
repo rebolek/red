@@ -365,7 +365,7 @@ terminal!: object [
 						move/part skip line pos first next l (length? line) - pos
 					]
 					line: first next l
-					pos: 0
+					max-pos: pos: 0
 				]
 			]
 			#"^H" [
