@@ -368,7 +368,19 @@ terminal!: object [
 					pos: 0
 				]
 			]
-			#"^H" [if pos <> 0 [pos: pos - 1 remove skip line pos]]
+			#"^H" [
+				either zero? pos [
+					unless equal? 'console system/console/edit-mode [
+						l: find lines line
+						line: first back l
+						pos: length? line
+						remove l
+					]
+				] [
+					pos: pos - 1 remove skip line pos
+				]
+				max-pos: pos
+			]
 			left  [move-caret -1]
 			right [move-caret 1]
 			up	  [probe "up" move-caret 0x-1]
