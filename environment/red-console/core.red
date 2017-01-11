@@ -161,9 +161,17 @@ terminal!: object [
 			h: h + pick heights n
 			n: n + 1
 		]
-		offset: probe box/offset? p + index? line
-		offset/y: probe offset/y + h + scroll-y
-		; #BB: fix position for editor (rewrite later for shorter code)
+		probe rejoin ["p:" p ", index:" index? line]
+		offset: either equal? 'console system/console/edit-mode [
+			box/offset? p + index? line
+		] [
+			; #BB: custom sizing routine for editor
+			; NOTE:	using size-text directly gives wrong result (not sure why)
+			;		but this workaround works
+			as-pair p * (1 + first size-text/with target "X") 0
+		]
+		offset/y: offset/y + h + scroll-y
+		probe rejoin ["offset: " offset]
 		if ask? [
 			either offset/y < target/size/y [
 				caret/offset: offset
@@ -172,6 +180,7 @@ terminal!: object [
 				if caret/visible? [caret/visible?: no]
 			]
 		]
+		probe ["--- update caret"]
 	]
 
 	mouse-down: func [event [event!] /local offset][
@@ -185,16 +194,17 @@ terminal!: object [
 	]
 
 	move-caret: func [n /local i][
+		probe rejoin ["*** move-caret, max is " length? line]
 		unless pair? n [n: as-pair n 0]
 		pos: pos + n/x
 		if negative? pos [pos: 0]
 		if pos > length? line [pos: pos - n/x]
-		; y-movement
-		unless zero? n/y [
+		; y-movement (editor only)
+		if all [
+			not zero? n/y
+			not equal? 'console system/console/edit-mode
+		] [
 			i: index? find lines line
-			probe rejoin [update-caret "-move" n/y " line:" line]
-			probe mold lines
-			probe rejoin ["idx:" i]
 			either negative? probe n/y [
 				; move up
 				i: max 1 i - 1
@@ -205,6 +215,7 @@ terminal!: object [
 				line: pick lines i
 			]
 		]
+		probe rejoin ["new position is " pos ]
 	]
 
 	scroll-lines: func [delta /local n len cnt end offset][
