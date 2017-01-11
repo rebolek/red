@@ -6,6 +6,14 @@ Red [
 	Rights:  "Copyright (C) 2016 Qingtian Xie. All rights reserved."
 ]
 
+; #BB: helper func
+
+prober: func [value] [
+	probe form reduce value
+]
+
+;
+
 terminal!: object [
 	lines:		make block! 1000				;-- line buffer
 	nlines:		make block! 1000				;-- line count of each line
@@ -33,6 +41,7 @@ terminal!: object [
 	line:		none							;-- current editing line
 	pos:		0								;-- insert position of the current editing line
 
+	max-pos:	0								;-- BB: maximum insert position for short lines
 	scroll-y:	0
 
 	line-y:		0								;-- y offset of editing line
@@ -148,7 +157,7 @@ terminal!: object [
 	]
 
 	update-caret: func [/local p len n s h lh offset][
-		probe rejoin ["*** update caret"]
+		prober ["*** update caret"]
 		n: top
 		h: 0
 		p: min pos length? line
@@ -161,7 +170,7 @@ terminal!: object [
 			h: h + pick heights n
 			n: n + 1
 		]
-		probe rejoin ["p:" p ", index:" index? line]
+		prober ["p:" p ", index:" index? line]
 		offset: either equal? 'console system/console/edit-mode [
 			box/offset? p + index? line
 		] [
@@ -171,7 +180,7 @@ terminal!: object [
 			as-pair p * (1 + first size-text/with target "X") 0
 		]
 		offset/y: offset/y + h + scroll-y
-		probe rejoin ["offset: " offset]
+		prober ["offset:" offset]
 		if ask? [
 			either offset/y < target/size/y [
 				caret/offset: offset
@@ -194,11 +203,14 @@ terminal!: object [
 	]
 
 	move-caret: func [n /local i][
-		probe rejoin ["*** move-caret, max is " length? line]
+		prober ["*** move-caret, max is " length? line]
+		prober ["*** max-pos" max-pos "pos" pos]
 		unless pair? n [n: as-pair n 0]
+		if pos > length? line [pos: length? line] ; #BB: make sure, we are not after line end
 		pos: pos + n/x
 		if negative? pos [pos: 0]
 		if pos > length? line [pos: pos - n/x]
+		unless zero? n/x [max-pos: pos]
 		; y-movement (editor only)
 		if all [
 			not zero? n/y
@@ -214,8 +226,12 @@ terminal!: object [
 				i: min length? lines i + 1
 				line: pick lines i
 			]
+			; fix horizontal caret position
+			if max-pos > pos [
+				pos: min length? line max-pos
+			]
 		]
-		probe rejoin ["new position is " pos ]
+		prober ["---- new max/position" max-pos pos ]
 	]
 
 	scroll-lines: func [delta /local n len cnt end offset][
@@ -345,7 +361,7 @@ terminal!: object [
 				switch-buffer
 				if equal? 'console system/console/edit-mode [exit-event-loop]
 				paint
-				probe rejoin ["mode: " system/console/edit-mode]
+				prober ["mode: " system/console/edit-mode]
 			;	paint
 			]
 			#"^M" [									;-- ENTER key
@@ -359,7 +375,7 @@ terminal!: object [
 			down  [probe "down" move-caret 0x1]
 		][
 			insert skip line pos char
-			pos: pos + 1
+			max-pos: pos: pos + 1
 		]
 		target/rate: 6
 		if caret/rate [caret/rate: none caret/color: 0.0.0.1]
