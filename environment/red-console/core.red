@@ -355,13 +355,17 @@ terminal!: object [
 			]
 			#"^M" [									;-- ENTER key
 				caret/visible?: no
-				exit-event-loop
-				unless equal? 'console system/console/edit-mode [
+				either equal? 'console system/console/edit-mode [
+					exit-event-loop
+				] [
 					l: find lines line
+					append/only lines copy ""
 					if pos < length? line [
-						unless first next l [append/only lines copy ""]
+					;	unless first next l []
 						move/part skip line pos first next l (length? line) - pos
 					]
+					line: first next l
+					pos: 0
 				]
 			]
 			#"^H" [if pos <> 0 [pos: pos - 1 remove skip line pos]]
@@ -387,9 +391,7 @@ terminal!: object [
 		n: top
 		num: line-cnt
 		foreach str at lines top [
-			probe "head1"
 			box/text: head str
-			probe "head2"
 			highlight/add-styles head str clear box/styles
 			box/layout
 			cmds/2/y: y
