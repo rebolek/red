@@ -93,6 +93,7 @@ terminal!: object [
 
 	reset-block: func [blk [block!] /advance /local s][
 		s: either advance [next blk][blk]
+		probe "head3"
 		blk: head blk
 		move/part s blk max-lines
 		clear s
@@ -170,7 +171,6 @@ terminal!: object [
 			h: h + pick heights n
 			n: n + 1
 		]
-		prober ["p:" p ", index:" index? line]
 		offset: either equal? 'console system/console/edit-mode [
 			box/offset? p + index? line
 		] [
@@ -180,7 +180,6 @@ terminal!: object [
 			as-pair p * (1 + first size-text/with target "X") 0
 		]
 		offset/y: offset/y + h + scroll-y
-		prober ["offset:" offset]
 		if ask? [
 			either offset/y < target/size/y [
 				caret/offset: offset
@@ -203,8 +202,6 @@ terminal!: object [
 	]
 
 	move-caret: func [n /local i][
-		prober ["*** move-caret, max is " length? line]
-		prober ["*** max-pos" max-pos "pos" pos]
 		unless pair? n [n: as-pair n 0]
 		if pos > length? line [pos: length? line] ; #BB: make sure, we are not after line end
 		pos: pos + n/x
@@ -217,21 +214,14 @@ terminal!: object [
 			not equal? 'console system/console/edit-mode
 		] [
 			i: index? find lines line
-			either negative? probe n/y [
-				; move up
-				i: max 1 i - 1
-				line: pick lines i
+			line: pick lines either negative? n/y [
+				max 1 i - 1 ; move up
 			] [
-				; move down
-				i: min length? lines i + 1
-				line: pick lines i
+				min length? lines i + 1 ; move down
 			]
 			; fix horizontal caret position
-			if max-pos > pos [
-				pos: min length? line max-pos
-			]
+			if max-pos > pos [pos: min length? line max-pos]
 		]
-		prober ["---- new max/position" max-pos pos ]
 	]
 
 	scroll-lines: func [delta /local n len cnt end offset][
@@ -348,7 +338,7 @@ terminal!: object [
 		]
 	]
 
-	press-key: func [event [event!] /local char][
+	press-key: func [event [event!] /local char l][
 		if process-shortcuts event [exit]
 		char: probe event/key
 		switch/default char [
@@ -361,12 +351,18 @@ terminal!: object [
 				switch-buffer
 				if equal? 'console system/console/edit-mode [exit-event-loop]
 				paint
-				prober ["mode: " system/console/edit-mode]
 			;	paint
 			]
 			#"^M" [									;-- ENTER key
 				caret/visible?: no
 				exit-event-loop
+				unless equal? 'console system/console/edit-mode [
+					l: find lines line
+					if pos < length? line [
+						unless first next l [append/only lines copy ""]
+						move/part skip line pos first next l (length? line) - pos
+					]
+				]
 			]
 			#"^H" [if pos <> 0 [pos: pos - 1 remove skip line pos]]
 			left  [move-caret -1]
@@ -391,7 +387,9 @@ terminal!: object [
 		n: top
 		num: line-cnt
 		foreach str at lines top [
+			probe "head1"
 			box/text: head str
+			probe "head2"
 			highlight/add-styles head str clear box/styles
 			box/layout
 			cmds/2/y: y
