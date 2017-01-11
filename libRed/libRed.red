@@ -87,6 +87,7 @@ Red [
 		redIndex?:	word/load "redIndex?"
 		redLength?:	word/load "redLength?"
 		redMake:	word/load "redMake"
+		redMold:	word/load "redMold"
 		redPick:	word/load "redPick"
 		redPoke:	word/load "redPoke"
 		redPut:		word/load "redPut"
@@ -266,11 +267,11 @@ Red [
 	]
 
 	redOpenDebugConsole: func [return: [logic!]][
-		red/platform/open-console
+		#if OS = 'Windows [red/platform/open-console]
 	]
 
 	redCloseDebugConsole: func [return: [logic!]][
-		red/platform/close-console
+		#if OS = 'Windows [red/platform/close-console]
 	]
 
 	redNone: func [
@@ -314,6 +315,14 @@ Red [
 		return: [red-value!] "String! or error! value"
 	][
 		ring/store import-string s names/redString yes
+	]
+	
+	redPair: func [
+		x		[integer!]
+		y		[integer!]
+		return: [red-pair!]
+	][
+		pair/make-at ring/alloc x y
 	]
 	
 	redSymbol: func [
@@ -670,6 +679,19 @@ Red [
 			stack/unwind-last
 		])
 	]
+	
+	redMold: func [
+		value	[red-value!]
+		return: [red-value!]
+		/local
+			res [red-value!]
+	][
+		TRAP_ERRORS(names/redMold [
+			stack/push value
+			actions/mold* -1 -1 -1 -1
+			stack/unwind-last
+		])
+	]
 
 	redPick: func [
 		series	[red-series!]
@@ -750,12 +772,14 @@ Red [
 	
 	redSkip: func [
 		series	[red-series!]
+		offset	[red-integer!]
 		return: [red-value!]
 		/local
 			res [red-value!]
 	][
 		TRAP_ERRORS(names/redSkip [
 			stack/push as red-value! series
+			stack/push as red-value! offset
 			actions/skip*
 			stack/unwind-last
 		])
@@ -868,6 +892,7 @@ Red [
 		redLogic
 		redInteger
 		redFloat
+		redPair
 		redString
 		redSymbol
 		redWord
@@ -897,6 +922,7 @@ Red [
 		redIndex
 		redLength
 		redMake
+		redMold
 		redPick
 		redPoke
 		redPut
