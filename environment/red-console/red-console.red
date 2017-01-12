@@ -155,9 +155,28 @@ red-console-ctx: context [
 
 	save-file: function [] [
 		lines: console/extra/lines
-		collect/into [foreach line lines [keep rejoin [line newline]]] file: make string! 10'000
-		if probe filename: request-file/save [
+		collect/into [
+			foreach line lines [keep rejoin [line newline]]
+		] file: make string! 10'000
+		if filename: request-file/save [
 			write to-red-file filename file
+		]
+	]
+
+	open-file: function [] [
+		if filename: request-file [
+			file: read/lines to-red-file filename
+			clear console/extra/lines
+			clear console/extra/nlines
+			clear console/extra/heights
+			foreach line file [
+				console/extra/add-line line
+				console/extra/calc-last-line
+			]
+			console/extra/line: first console/extra/lines
+			console/extra/max-pos: console/extra/pos: 0
+			console/extra/paint
+			show console
 		]
 	]
 
@@ -192,7 +211,7 @@ red-console-ctx: context [
 		win/actors: object [
 			on-menu: func [face [object!] event [event!]][
 				switch event/picked [
-					open-file 		[probe "*** open file"]
+					open-file 		[open-file]
 					save-file 		[save-file]
 					about-msg		[display-about]
 					quit			[self/on-close face event]
