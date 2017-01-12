@@ -214,10 +214,14 @@ terminal!: object [
 			not equal? 'console system/console/edit-mode
 		] [
 			i: index? find lines line
-			line: pick lines either negative? n/y [
-				max 1 i - 1 ; move up
-			] [
-				min length? lines i + 1 ; move down
+			line: pick lines case [
+				all [positive? n/y equal? i length? lines] [
+					; move down on last line - put caret to end
+					max-pos: pos: length? line
+					length? lines
+				]
+				positive? n/y [min length? lines i + 1] ; move down
+				negative? n/y [max 1 i - 1] ; move up
 			]
 			; fix horizontal caret position
 			if max-pos > pos [pos: min length? line max-pos]
