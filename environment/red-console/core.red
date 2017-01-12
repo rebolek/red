@@ -12,6 +12,13 @@ prober: func [value] [
 	probe form reduce value
 ]
 
+window-face?: func [face] [
+	while [not equal? 'window face/type] [
+		face: face/parent
+	]
+	face
+]
+
 ;
 
 terminal!: object [
@@ -342,20 +349,33 @@ terminal!: object [
 		]
 	]
 
-	press-key: func [event [event!] /local char l][
+	press-key: func [event [event!] /local char l win][
 		if process-shortcuts event [exit]
 		char: probe event/key
 		switch/default char [
 			#"^[" [									;-- ESCAPE key
+				; TODO: this probably ignores normal ESC function in console
+				;		in console, switching should occur only when on start new-line
+				;		and when idle
 				probe "*** buffer is"
 				probe buffer
 				; switch to/from editing mode
 				system/console/edit-mode: select system/console/edit-modes system/console/edit-mode
 				unless system/console/edit-mode [system/console/edit-mode: first system/console/edit-modes]
 				switch-buffer
-				if equal? 'console system/console/edit-mode [exit-event-loop]
+				; TODO: change menu only when switching
+				win: window-face? self/target
+				switch system/console/edit-mode [
+					console [
+						win/menu: red-console-ctx/console-menu
+						exit-event-loop
+					]
+					insert [
+						win/menu: red-console-ctx/editor-menu
+					]
+
+				]
 				paint
-			;	paint
 			]
 			#"^M" [									;-- ENTER key
 				caret/visible?: no
