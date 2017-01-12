@@ -394,7 +394,10 @@ terminal!: object [
 			]
 			#"^H" [
 				either zero? pos [
-					unless equal? 'console system/console/edit-mode [
+					if all [
+						equal? 'insert system/console/edit-mode
+						1 < length? lines 
+					] [
 						l: find lines line
 						line: first back l
 						pos: length? line
