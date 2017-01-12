@@ -413,7 +413,15 @@ terminal!: object [
 			]
 			delete [
 				if edit-mode? 'insert [
-					remove skip line pos
+					either equal? pos length? line [
+						; line end
+						l: find lines line
+						move/part first next l tail first l length? first next l
+						remove next l
+					] [
+						; normal operation
+						remove skip line pos
+					]
 				]
 			]
 			left  [move-caret -1]
