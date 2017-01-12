@@ -221,7 +221,7 @@ terminal!: object [
 		; y-movement (editor only)
 		if all [
 			not zero? n/y
-			not equal? edit-mode? 'console
+			not edit-mode? 'console
 		] [
 			i: index? find lines line
 			line: pick lines case [
@@ -382,7 +382,7 @@ terminal!: object [
 			]
 			#"^M" [									;-- ENTER key
 				caret/visible?: no
-				either equal? 'console system/console/edit-mode [
+				either edit-mode? 'console [
 					exit-event-loop
 				] [
 					l: find lines line
@@ -395,10 +395,10 @@ terminal!: object [
 					max-pos: pos: 0
 				]
 			]
-			#"^H" [
+			#"^H" [									;-- BACKSPACE key
 				either zero? pos [
 					if all [
-						equal? edit-mode? 'insert
+						edit-mode? 'insert
 						1 < length? lines 
 					] [
 						l: find lines line
@@ -410,6 +410,11 @@ terminal!: object [
 					pos: pos - 1 remove skip line pos
 				]
 				max-pos: pos
+			]
+			delete [
+				if edit-mode? 'insert [
+					remove skip line pos
+				]
 			]
 			left  [move-caret -1]
 			right [move-caret 1]
