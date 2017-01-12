@@ -153,22 +153,47 @@ red-console-ctx: context [
 		save/header cfg-path cfg [Purpose: "Red REPL Console Configuration File"]
 	]
 
+	save-file: function [] [
+		lines: console/extra/lines
+		collect/into [foreach line lines [keep rejoin [line newline]]] file: make string! 10'000
+		if probe filename: request-file/save [
+			write to-red-file filename file
+		]
+	]
+
+	console-menu: [
+		"File" [
+			"About"				about-msg
+			---
+			"Quit"				quit
+		]
+		"Options" [
+			"Choose Font..."	choose-font
+			"Settings..."		settings
+		]
+	]
+	editor-menu: [
+		"File" [
+			"Open"				open-file
+			"Save"				save-file
+			"About"				about-msg
+			---
+			"Quit"				quit
+		]
+		"Options" [
+			"Choose Font..."	choose-font
+			"Settings..."		settings
+		]
+	]
+
 	setup-faces: does [
 		append win/pane reduce [console tips caret]
-		win/menu: [
-			"File" [
-				"About"				about-msg
-				---
-				"Quit"				quit
-			]
-			"Options" [
-				"Choose Font..."	choose-font
-				"Settings..."		settings
-			]
-		]
+		win/menu: console-menu
 		win/actors: object [
 			on-menu: func [face [object!] event [event!]][
 				switch event/picked [
+					open-file 		[probe "*** open file"]
+					save-file 		[save-file]
 					about-msg		[display-about]
 					quit			[self/on-close face event]
 					choose-font		[if font: request-font/mono [console/font: font]]
