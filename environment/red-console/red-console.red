@@ -166,13 +166,25 @@ red-console-ctx: context [
 	open-file: function [] [
 		if filename: request-file [
 			file: read/lines to-red-file filename
-			clear console/extra/lines
-			clear console/extra/nlines
-			clear console/extra/heights
+			clear-file/init
 			foreach line file [
 				console/extra/add-line line
 				console/extra/calc-last-line
 			]
+			console/extra/line: first console/extra/lines
+			console/extra/max-pos: console/extra/pos: 0
+			console/extra/paint
+			show console
+		]
+	]
+
+	clear-file: function [/init] [
+		clear console/extra/lines
+		clear console/extra/nlines
+		clear console/extra/heights
+		unless init [
+			console/extra/add-line make string! 80
+			console/extra/calc-last-line
 			console/extra/line: first console/extra/lines
 			console/extra/max-pos: console/extra/pos: 0
 			console/extra/paint
@@ -195,6 +207,7 @@ red-console-ctx: context [
 		"File" [
 			"Open"				open-file
 			"Save"				save-file
+			"Clear"				clear-file
 			"About"				about-msg
 			---
 			"Quit"				quit
@@ -213,6 +226,7 @@ red-console-ctx: context [
 				switch event/picked [
 					open-file 		[open-file]
 					save-file 		[save-file]
+					clear-file		[clear-file]
 					about-msg		[display-about]
 					quit			[self/on-close face event]
 					choose-font		[if font: request-font/mono [console/font: font]]
