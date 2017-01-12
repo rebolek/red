@@ -19,6 +19,9 @@ window-face?: func [face] [
 	face
 ]
 
+edit-mode?: func [mode] [
+	equal? mode system/console/edit-mode
+]
 ;
 
 terminal!: object [
@@ -169,7 +172,7 @@ terminal!: object [
 		n: top
 		h: 0
 		p: min pos length? line
-		len: either equal? system/console/edit-mode 'console [
+		len: either edit-mode? 'console [
 			length? skip lines top
 		] [
 			-1 + index? find lines line
@@ -178,7 +181,7 @@ terminal!: object [
 			h: h + pick heights n
 			n: n + 1
 		]
-		offset: either equal? 'console system/console/edit-mode [
+		offset: either edit-mode? 'console [
 			box/offset? p + index? line
 		] [
 			; #BB: custom sizing routine for editor
@@ -218,7 +221,7 @@ terminal!: object [
 		; y-movement (editor only)
 		if all [
 			not zero? n/y
-			not equal? 'console system/console/edit-mode
+			not equal? edit-mode? 'console
 		] [
 			i: index? find lines line
 			line: pick lines case [
@@ -395,7 +398,7 @@ terminal!: object [
 			#"^H" [
 				either zero? pos [
 					if all [
-						equal? 'insert system/console/edit-mode
+						equal? edit-mode? 'insert
 						1 < length? lines 
 					] [
 						l: find lines line
