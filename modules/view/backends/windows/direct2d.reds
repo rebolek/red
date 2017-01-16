@@ -657,7 +657,11 @@ GetUserDefaultLocaleName!: alias function! [
 	return:			[integer!]
 ]
 
+<<<<<<< HEAD
 #define ConvertPointSizeToDIP(size)		(as float32! size / 72.0  * 94.0)
+=======
+#define ConvertPointSizeToDIP(size)		(as float32! 96.0 / 72.0 * size)
+>>>>>>> db107d013644efba05048f70a67e537a492b9c73
 
 select-brush: func [
 	target		[int-ptr!]
