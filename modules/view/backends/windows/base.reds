@@ -450,6 +450,19 @@ BaseWndProc: func [
 			]
 			return 0
 		]
+<<<<<<< HEAD
+=======
+		WM_VSCROLL
+		WM_HSCROLL [
+			if zero? lParam [						;-- message from standard scroll bar
+				current-msg/hWnd: hWnd
+				current-msg/msg: msg
+				current-msg/wParam: wParam
+				make-event current-msg 0 EVT_SCROLL
+				return 0
+			]
+		]
+>>>>>>> db107d013644efba05048f70a67e537a492b9c73
 		0317h	;-- WM_PRINT
 		0318h [ ;-- WM_PRINTCLIENT
 			draw: (as red-block! get-face-values hWnd) + FACE_OBJ_DRAW
@@ -612,6 +625,11 @@ update-base: func [
 		alpha?	[logic!]
 		flags	[integer!]
 ][
+	if (get-face-flags hWnd) and FACET_FLAGS_D2D <> 0 [
+		InvalidateRect hWnd null 0
+		exit
+	]
+
 	flags: GetWindowLong hWnd GWL_EXSTYLE
 	if zero? (flags and WS_EX_LAYERED) [
 		graphic: GetWindowLong hWnd wc-offset - 4
