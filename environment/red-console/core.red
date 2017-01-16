@@ -274,8 +274,10 @@ terminal!: object [
 		show target
 	]
 
-	move-caret: func [n][
-		pos: pos + n
+	move-caret: func [n /local i][
+		unless pair? n [n: as-pair n 0]
+		if pos > length? line [pos: length? line] ; #BB: make sure, we are not after line end
+		pos: pos + n/x
 		if negative? pos [pos: 0]
 		if pos > length? line [pos: pos - n/x]
 		unless zero? n/x [max-pos: pos]
