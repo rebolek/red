@@ -12,6 +12,16 @@ prober: func [value] [
 	probe form reduce value
 ]
 
+window-face?: func [face] [
+	while [not equal? 'window face/type] [
+		face: face/parent
+	]
+	face
+]
+
+edit-mode?: func [mode] [
+	equal? mode system/console/edit-mode
+]
 ;
 
 terminal!: object [
@@ -189,7 +199,7 @@ terminal!: object [
 		n: top
 		h: 0
 		p: min pos length? line
-		len: either equal? system/console/edit-mode 'console [
+		len: either edit-mode? 'console [
 			length? skip lines top
 		] [
 			-1 + index? find lines line
@@ -198,7 +208,7 @@ terminal!: object [
 			h: h + pick heights n
 			n: n + 1
 		]
-		offset: either equal? 'console system/console/edit-mode [
+		offset: either edit-mode? 'console [
 			box/offset? p + index? line
 		] [
 			; #BB: custom sizing routine for editor
@@ -284,13 +294,17 @@ terminal!: object [
 		; y-movement (editor only)
 		if all [
 			not zero? n/y
-			not equal? 'console system/console/edit-mode
+			not equal? edit-mode? 'console
 		] [
 			i: index? find lines line
-			line: pick lines either negative? n/y [
-				max 1 i - 1 ; move up
-			] [
-				min length? lines i + 1 ; move down
+			line: pick lines case [
+				all [positive? n/y equal? i length? lines] [
+					; move down on last line - put caret to end
+					max-pos: pos: length? line
+					length? lines
+				]
+				positive? n/y [min length? lines i + 1] ; move down
+				negative? n/y [max 1 i - 1] ; move up
 			]
 			; fix horizontal caret position
 			if max-pos > pos [pos: min length? line max-pos]
@@ -411,20 +425,33 @@ terminal!: object [
 		]
 	]
 
-	press-key: func [event [event!] /local char l][
+	press-key: func [event [event!] /local char l win][
 		if process-shortcuts event [exit]
 		char: probe event/key
 		switch/default char [
 			#"^[" [									;-- ESCAPE key
+				; TODO: this probably ignores normal ESC function in console
+				;		in console, switching should occur only when on start new-line
+				;		and when idle
 				probe "*** buffer is"
 				probe buffer
 				; switch to/from editing mode
 				system/console/edit-mode: select system/console/edit-modes system/console/edit-mode
 				unless system/console/edit-mode [system/console/edit-mode: first system/console/edit-modes]
 				switch-buffer
-				if equal? 'console system/console/edit-mode [exit-event-loop]
+				; TODO: change menu only when switching
+				win: window-face? self/target
+				switch system/console/edit-mode [
+					console [
+						win/menu: red-console-ctx/console-menu
+						exit-event-loop
+					]
+					insert [
+						win/menu: red-console-ctx/editor-menu
+					]
+
+				]
 				paint
-			;	paint
 			]
 			#"^M" [									;-- ENTER key
 				caret/visible?: no
@@ -443,7 +470,10 @@ terminal!: object [
 			]
 			#"^H" [
 				either zero? pos [
-					unless equal? 'console system/console/edit-mode [
+					if all [
+						equal? edit-mode? 'insert
+						1 < length? lines 
+					] [
 						l: find lines line
 						line: first back l
 						pos: length? line

@@ -153,22 +153,80 @@ red-console-ctx: context [
 		save/header cfg-path cfg [Purpose: "Red REPL Console Configuration File"]
 	]
 
+	save-file: function [] [
+		lines: console/extra/lines
+		collect/into [
+			foreach line lines [keep rejoin [line newline]]
+		] file: make string! 10'000
+		if filename: request-file/save [
+			write to-red-file filename file
+		]
+	]
+
+	open-file: function [] [
+		if filename: request-file [
+			file: read/lines to-red-file filename
+			clear-file/init
+			foreach line file [
+				console/extra/add-line line
+				console/extra/calc-last-line
+			]
+			console/extra/line: first console/extra/lines
+			console/extra/max-pos: console/extra/pos: 0
+			console/extra/paint
+			show console
+		]
+	]
+
+	clear-file: function [/init] [
+		clear console/extra/lines
+		clear console/extra/nlines
+		clear console/extra/heights
+		unless init [
+			console/extra/add-line make string! 80
+			console/extra/calc-last-line
+			console/extra/line: first console/extra/lines
+			console/extra/max-pos: console/extra/pos: 0
+			console/extra/paint
+			show console
+		]
+	]
+
+	console-menu: [
+		"File" [
+			"About"				about-msg
+			---
+			"Quit"				quit
+		]
+		"Options" [
+			"Choose Font..."	choose-font
+			"Settings..."		settings
+		]
+	]
+	editor-menu: [
+		"File" [
+			"Open"				open-file
+			"Save"				save-file
+			"Clear"				clear-file
+			"About"				about-msg
+			---
+			"Quit"				quit
+		]
+		"Options" [
+			"Choose Font..."	choose-font
+			"Settings..."		settings
+		]
+	]
+
 	setup-faces: does [
 		append win/pane reduce [console tips caret]
-		win/menu: [
-			"File" [
-				"About"				about-msg
-				---
-				"Quit"				quit
-			]
-			"Options" [
-				"Choose Font..."	choose-font
-				"Settings..."		settings
-			]
-		]
+		win/menu: console-menu
 		win/actors: object [
 			on-menu: func [face [object!] event [event!]][
 				switch event/picked [
+					open-file 		[open-file]
+					save-file 		[save-file]
+					clear-file		[clear-file]
 					about-msg		[display-about]
 					quit			[self/on-close face event]
 					choose-font		[if font: request-font/mono [console/font: font]]
