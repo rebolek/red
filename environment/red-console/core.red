@@ -355,7 +355,6 @@ terminal!: object [
 				probe "*** buffer is"
 				probe buffer
 				; switch to/from editing mode
-				switch-buffer
 				win: window-face? self/target
 				switch system/console/edit-mode [
 					console [
@@ -363,6 +362,7 @@ terminal!: object [
 						win/menu: red-console-ctx/editor-menu
 						exit-event-loop
 						system/console/edit-mode: 'insert
+						switch-buffer
 					]
 					insert [
 						; switch in editor to COMMAND mode
