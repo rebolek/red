@@ -763,7 +763,11 @@ Red/System [
 										as red-pair! cmd
 								]
 							]
+<<<<<<< HEAD
 							sym = _push [
+=======
+							sym = _push [							;@@ push is a keyword in R/S
+>>>>>>> c7c611f92abbb31266e1f217fa076825decfda20
 								DRAW_FETCH_VALUE(TYPE_BLOCK)
 								OS-matrix-push DC :state
 								parse-draw DC as red-block! start catch?
