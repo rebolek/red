@@ -436,20 +436,20 @@ terminal!: object [
 				probe "*** buffer is"
 				probe buffer
 				; switch to/from editing mode
-				system/console/edit-mode: select system/console/edit-modes system/console/edit-mode
-				unless system/console/edit-mode [system/console/edit-mode: first system/console/edit-modes]
 				switch-buffer
-				; TODO: change menu only when switching
 				win: window-face? self/target
 				switch system/console/edit-mode [
 					console [
-						win/menu: red-console-ctx/console-menu
+						; switch to editor (INSERT mode)
+						win/menu: red-console-ctx/editor-menu
 						exit-event-loop
+						system/console/edit-mode: 'insert
 					]
 					insert [
-						win/menu: red-console-ctx/editor-menu
+						; switch in editor to COMMAND mode
+					;	win/menu: red-console-ctx/editor-menu
+						system/console/edit-mode: 'command
 					]
-
 				]
 				paint
 			]
