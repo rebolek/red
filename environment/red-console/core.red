@@ -4,6 +4,9 @@ Red [
 	File:	 %console.red
 	Tabs:	 4
 	Rights:  "Copyright (C) 2016 Qingtian Xie. All rights reserved."
+	TODO: [
+		"fix position and prompt after returning from editor to console"
+	]
 ]
 
 ; #BB: helper func
@@ -424,6 +427,7 @@ terminal!: object [
 		][
 			either edit-mode? 'command [
 				probe "Do some commands, nigga"
+				do-command event/key
 			] [
 				insert skip line pos char
 				max-pos: pos: pos + 1
@@ -489,6 +493,20 @@ terminal!: object [
 		"Return LINES at current line"
 	] [
 		find/same lines line
+	]
+
+	do-command: function [
+		cmd
+	] [
+		switch cmd [
+			#"q" [
+				switch-buffer
+				win: window-face? self/target
+				win/menu: red-console-ctx/console-menu
+				system/console/edit-mode: 'console
+				paint
+			]
+		]
 	]
 
 ; /BB additions
