@@ -14,8 +14,13 @@ d2d-factory:	as this! 0
 dwrite-factory: as this! 0
 dw-locale-name: as c-string! 0
 
+dwrite-str-cache: as c-string! 0
+
+#define D2D_MAX_BRUSHES 64
+
 #define float32-ptr! [pointer! [float32!]]
 #define D2DERR_RECREATE_TARGET 8899000Ch
+#define FLT_MAX	[as float32! 3.402823466e38]
 
 IID_ID2D1Factory:		[06152247h 465A6F50h 8B114592h 07603BFDh]
 IID_IDWriteFactory:		[B859EE5Ah 4B5BD838h DC1AE8A2h 48DB937Dh]
@@ -160,7 +165,7 @@ DrawTextLayout*: alias function! [
 	this		[this!]
 	x			[float32!]
 	y			[float32!]
-	layout		[integer!]
+	layout		[this!]
 	brush		[integer!]
 	options		[integer!]
 ]
@@ -366,6 +371,39 @@ ID2D1DCRenderTarget: alias struct! [
 
 ;-- Direct Write
 
+DWRITE_LINE_METRICS: alias struct! [
+	length					 [integer!]
+	trailingWhitespaceLength [integer!]
+	newlineLength			 [integer!]
+	height					 [float32!]
+	baseline				 [float32!]
+	isTrimmed				 [logic!]
+]
+
+DWRITE_TEXT_METRICS: alias struct! [
+	left			[float32!]
+	top				[float32!]
+	width			[float32!]
+	widthTrailing	[float32!]
+	height			[float32!]
+	layoutWidth		[float32!]
+	layoutHeight	[float32!]
+	maxBidiDepth	[integer!]
+	lineCount		[integer!]
+]
+
+DWRITE_HIT_TEST_METRICS: alias struct! [
+	textPosition	[integer!]
+	length			[integer!]
+	left			[float32!]
+	top				[float32!]
+	width			[float32!]
+	height			[float32!]
+	bidiLevel		[integer!]
+	isText			[logic!]
+	isTrimmed		[logic!]
+]
+
 CreateTextFormat*: alias function! [
 	this		[this!]
 	fontName	[c-string!]
@@ -383,10 +421,58 @@ CreateTextLayout*: alias function! [
 	this		[this!]
 	string		[c-string!]
 	length		[integer!]
-	format		[integer!]
+	format		[this!]
 	maxWidth	[float32!]
 	maxHeight	[float32!]
 	layout		[int-ptr!]
+	return:		[integer!]
+]
+
+HitTestPoint*: alias function! [
+	this		[this!]
+	x			[float32!]
+	y			[float32!]
+	isTrailing	[int-ptr!]
+	isInside	[int-ptr!]
+	metrics		[DWRITE_HIT_TEST_METRICS]
+	return:		[integer!]
+]
+
+HitTestTextPosition*: alias function! [
+	this		[this!]
+	pos			[integer!]
+	trailing?	[logic!]
+	x			[float32-ptr!]
+	y			[float32-ptr!]
+	metrics		[DWRITE_HIT_TEST_METRICS]
+	return:		[integer!]
+]
+
+HitTestTextRange*: alias function! [
+	this		[this!]
+	pos			[integer!]
+	len			[integer!]
+	x			[float32!]
+	y			[float32!]
+	metrics		[DWRITE_HIT_TEST_METRICS]
+	max-cnt		[integer!]
+	cnt			[int-ptr!]
+	return:		[integer!]
+]
+
+SetLineSpacing*: alias function! [
+	this		[this!]
+	method		[integer!]
+	lineSpacing [float32!]
+	baseline	[float32!]
+	return:		[integer!]
+]
+
+GetLineSpacing*: alias function! [
+	this		[this!]
+	method		[int-ptr!]
+	lineSpacing [float32-ptr!]
+	baseline	[float32-ptr!]
 	return:		[integer!]
 ]
 
@@ -439,7 +525,7 @@ IDWriteTextFormat: alias struct! [
 	SetFlowDirection				[integer!]
 	SetIncrementalTabStop			[integer!]
 	SetTrimming						[integer!]
-	SetLineSpacing					[integer!]
+	SetLineSpacing					[SetLineSpacing*]
 	GetTextAlignment				[integer!]
 	GetParagraphAlignment			[integer!]
 	GetWordWrapping					[integer!]
@@ -447,7 +533,7 @@ IDWriteTextFormat: alias struct! [
 	GetFlowDirection				[integer!]
 	GetIncrementalTabStop			[integer!]
 	GetTrimming						[integer!]
-	GetLineSpacing					[integer!]
+	GetLineSpacing					[GetLineSpacing*]
 	GetFontCollection				[integer!]
 	GetFontFamilyNameLength			[integer!]
 	GetFontFamilyName				[integer!]
@@ -457,6 +543,76 @@ IDWriteTextFormat: alias struct! [
 	GetFontSize						[integer!]
 	GetLocaleNameLength				[integer!]
 	GetLocaleName					[integer!]
+]
+
+IDWriteTextLayout: alias struct! [
+	QueryInterface					[QueryInterface!]
+	AddRef							[AddRef!]
+	Release							[Release!]
+	SetTextAlignment				[function! [this [this!] align [integer!] return: [integer!]]]
+	SetParagraphAlignment			[function! [this [this!] align [integer!] return: [integer!]]]
+	SetWordWrapping					[function! [this [this!] mode [integer!] return: [integer!]]]
+	SetReadingDirection				[integer!]
+	SetFlowDirection				[integer!]
+	SetIncrementalTabStop			[integer!]
+	SetTrimming						[integer!]
+	SetLineSpacing					[SetLineSpacing*]
+	GetTextAlignment				[integer!]
+	GetParagraphAlignment			[integer!]
+	GetWordWrapping					[integer!]
+	GetReadingDirection				[integer!]
+	GetFlowDirection				[integer!]
+	GetIncrementalTabStop			[integer!]
+	GetTrimming						[integer!]
+	GetLineSpacing					[GetLineSpacing*]
+	GetFontCollection				[integer!]
+	GetFontFamilyNameLength			[integer!]
+	GetFontFamilyName				[integer!]
+	GetFontWeight					[integer!]
+	GetFontStyle					[integer!]
+	GetFontStretch					[integer!]
+	GetFontSize						[integer!]
+	GetLocaleNameLength				[integer!]
+	GetLocaleName					[integer!]
+	SetMaxWidth						[integer!]
+	SetMaxHeight					[integer!]
+	SetFontCollection				[integer!]
+	SetFontFamilyName				[function! [this [this!] name [c-string!] pos [integer!] len [integer!] return: [integer!]]]
+	SetFontWeight					[function! [this [this!] weight [integer!] pos [integer!] len [integer!] return: [integer!]]]
+	SetFontStyle					[function! [this [this!] style [integer!] pos [integer!] len [integer!] return: [integer!]]]
+	SetFontStretch					[integer!]
+	SetFontSize						[function! [this [this!] size [float32!] pos [integer!] len [integer!] return: [integer!]]]
+	SetUnderline					[function! [this [this!] underline? [logic!] pos [integer!] len [integer!] return: [integer!]]]
+	SetStrikethrough				[function! [this [this!] strike? [logic!] pos [integer!] len [integer!] return: [integer!]]]
+	SetDrawingEffect				[function! [this [this!] effect [this!] pos [integer!] len [integer!] return: [integer!]]]
+	SetInlineObject					[function! [this [this!] obj [this!] pos [integer!] len [integer!] return: [integer!]]]
+	SetTypography					[integer!]
+	SetLocaleName					[integer!]
+	GetMaxWidth						[integer!]
+	GetMaxHeight					[integer!]
+	GetFontCollection				[integer!]
+	GetFontFamilyNameLength			[integer!]
+	GetFontFamilyName				[integer!]
+	GetFontWeight					[integer!]
+	GetFontStyle					[integer!]
+	GetFontStretch					[integer!]
+	GetFontSize						[integer!]
+	GetUnderline					[integer!]
+	GetStrikethrough				[integer!]
+	GetDrawingEffect				[integer!]
+	GetInlineObject					[integer!]
+	GetTypography					[integer!]
+	GetLocaleNameLength				[integer!]
+	GetLocaleName					[integer!]
+	Draw							[integer!]
+	GetLineMetrics					[function! [this [this!] metrics [DWRITE_LINE_METRICS] count [integer!] actual-count [int-ptr!] return: [integer!]]]
+	GetMetrics						[function! [this [this!] metrics [DWRITE_TEXT_METRICS] return: [integer!]]]
+	GetOverhangMetrics				[integer!]
+	GetClusterMetrics				[integer!]
+	DetermineMinWidth				[integer!]
+	HitTestPoint					[HitTestPoint*]
+	HitTestTextPosition				[HitTestTextPosition*]
+	HitTestTextRange				[HitTestTextRange*]
 ]
 
 IDWriteFontFace: alias struct! [
@@ -501,10 +657,47 @@ GetUserDefaultLocaleName!: alias function! [
 	return:			[integer!]
 ]
 
-#define ConvertPointSizeToDIP(size)		(as float32! size / 72.0  * 94.0)
+#define ConvertPointSizeToDIP(size)		(as float32! 96.0 / 72.0 * size)
+
+select-brush: func [
+	target		[int-ptr!]
+	color		[integer!]
+	return: 	[integer!]
+	/local
+		brushes [int-ptr!]
+		cnt		[integer!]
+][
+	brushes: as int-ptr! target/1
+	cnt: target/2
+	loop cnt [
+		either brushes/value = color [
+			return brushes/2
+		][
+			brushes: brushes + 2
+		]
+	]
+	0
+]
+
+put-brush: func [
+	target		[int-ptr!]
+	color		[integer!]
+	brush		[integer!]
+	/local
+		brushes [int-ptr!]
+		cnt		[integer!]
+][
+	cnt: target/2
+	brushes: (as int-ptr! target/1) + (cnt * 2)
+	brushes/1: color
+	brushes/2: brush
+	target/2: cnt + 1 % D2D_MAX_BRUSHES
+]
 
 DX-init: func [
 	/local
+		node				[node!]
+		s					[series!]
 		hr					[integer!]
 		factory 			[integer!]
 		dll					[handle!]
@@ -532,6 +725,9 @@ DX-init: func [
 	hr: DWriteCreateFactory 0 IID_IDWriteFactory :factory		;-- DWRITE_FACTORY_TYPE_SHARED: 0
 	assert zero? hr
 	dwrite-factory: as this! factory
+	node: alloc-bytes 1024
+	s: as series! node/value
+	dwrite-str-cache: as-c-string s/offset
 ]
 
 to-dx-color: func [
@@ -554,12 +750,24 @@ to-dx-color: func [
 ]
 
 d2d-release-target: func [
-	this	[this!]
+	target	[int-ptr!]
 	/local
-		rt	 [ID2D1HwndRenderTarget]
+		rt		[ID2D1HwndRenderTarget]
+		brushes [int-ptr!]
+		cnt		[integer!]
+		this	[this!]
+		obj		[IUnknown]
 ][
+	brushes: as int-ptr! target/2
+	cnt: target/3
+	loop cnt [
+		COM_SAFE_RELEASE_OBJ(obj brushes/2)
+		brushes: brushes + 2
+	]
+	this: as this! target/1
 	rt: as ID2D1HwndRenderTarget this/vtbl
 	rt/Release this
+	free as byte-ptr! target
 ]
 
 create-hwnd-render-target: func [
@@ -583,254 +791,6 @@ create-hwnd-render-target: func [
 		right		[integer!]
 		top			[integer!]
 		left		[integer!]
-		factory		[ID2D1Factory]
-		rt			[ID2D1HwndRenderTarget]
-		target		[integer!]
-		hr			[integer!]
-][
-	left: 0 top: 0 right: 0 bottom: 0
-	GetClientRect hwnd as RECT_STRUCT :left
-	wnd: as-integer hwnd
-	width: right - left
-	height: bottom - top
-	options: 1						;-- D2D1_PRESENT_OPTIONS_RETAIN_CONTENTS: 1
-	hprops: as D2D1_HWND_RENDER_TARGET_PROPERTIES :wnd
-
-	minLevel: 0
-	props: as D2D1_RENDER_TARGET_PROPERTIES :minLevel
-	zero-memory as byte-ptr! props size? D2D1_RENDER_TARGET_PROPERTIES
-
-	target: 0
-	factory: as ID2D1Factory d2d-factory/vtbl
-	hr: factory/CreateHwndRenderTarget d2d-factory props hprops :target
-	if hr <> 0 [return null]
-	as this! target
-]
-
-create-dc-render-target: func [
-	dc		[handle!]
-	rc		[RECT_STRUCT]
-	return: [this!]
-	/local
-		type		[integer!]
-		format		[integer!]
-		alphaMode	[integer!]
-		dpiX		[integer!]
-		dpiY		[integer!]
-		usage		[integer!]
-		minLevel	[integer!]
-		props		[D2D1_RENDER_TARGET_PROPERTIES]
-		factory		[ID2D1Factory]
-		rt			[ID2D1DCRenderTarget]
-		IRT			[this!]
-		target		[integer!]
-		hr			[integer!]
-][
-	minLevel: 0
-	props: as D2D1_RENDER_TARGET_PROPERTIES :minLevel
-	props/type: 0									;-- D2D1_RENDER_TARGET_TYPE_DEFAULT
-	props/format: 87								;-- DXGI_FORMAT_B8G8R8A8_UNORM
-	props/alphaMode: 1								;-- D2D1_ALPHA_MODE_PREMULTIPLIED
-	props/dpiX: as float32! log-pixels-x
-	props/dpiY: as float32! log-pixels-y
-	props/usage: 2									;-- D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE
-	props/minLevel: 0								;-- D2D1_FEATURE_LEVEL_DEFAULT
-
-	target: 0
-	factory: as ID2D1Factory d2d-factory/vtbl
-	hr: factory/CreateDCRenderTarget d2d-factory props :target
-	if hr <> 0 [return null]
-
-	IRT: as this! target
-	rt: as ID2D1DCRenderTarget IRT/vtbl
-	hr: rt/BindDC IRT dc rc
-	if hr <> 0 [rt/Release IRT return null]
-	IRT
-]
-
-create-text-format: func [
-	font	[red-object!]
-	return: [integer!]
-	/local
-		values	[red-value!]
-		h-font	[red-integer!]
-		int		[red-integer!]
-		value	[red-value!]
-		w		[red-word!]
-		str		[red-string!]
-		blk		[red-block!]
-		weight	[integer!]
-		style	[integer!]
-		f		[float!]
-		size	[float32!]
-		len		[integer!]
-		sym		[integer!]
-		name	[c-string!]
-		format	[integer!]
-		factory [IDWriteFactory]
-		save?	[logic!]
-][
-	weight:	400
-	style:  0
-	either TYPE_OF(font) = TYPE_OBJECT [
-		save?: yes
-		values: object/get-values font
-		blk: as red-block! values + FONT_OBJ_STATE
-		assert TYPE_OF(blk) = TYPE_BLOCK
-
-		h-font: (as red-integer! block/rs-head blk) + 1
-		if TYPE_OF(h-font) = TYPE_INTEGER [
-			return h-font/value
-		]
-
-		int: as red-integer! values + FONT_OBJ_SIZE
-		len: either TYPE_OF(int) <> TYPE_INTEGER [10][int/value]
-		f: as-float len
-		size: ConvertPointSizeToDIP(f)
-
-		str: as red-string! values + FONT_OBJ_NAME
-		name: either TYPE_OF(str) = TYPE_STRING [
-			len: string/rs-length? str
-			if len > 31 [len: 31]
-			unicode/to-utf16-len str :len yes
-		][null]
-		
-		w: as red-word! values + FONT_OBJ_STYLE
-		len: switch TYPE_OF(w) [
-			TYPE_BLOCK [
-				blk: as red-block! w
-				w: as red-word! block/rs-head blk
-				len: block/rs-length? blk
-			]
-			TYPE_WORD  [1]
-			default	   [0]
-		]
-
-		unless zero? len [
-			loop len [
-				sym: symbol/resolve w/symbol
-				case [
-					sym = _bold	 	 [weight:  700]
-					sym = _italic	 [style:	 2]
-					true			 [0]
-				]
-				w: w + 1
-			]
-		]
-	][
-		save?: no
-		int: as red-integer! #get system/view/fonts/size
-		str: as red-string!  #get system/view/fonts/system
-		f: as-float int/value
-		size: ConvertPointSizeToDIP(f)
-		name: unicode/to-utf16 str
-	]
-
-	format: 0
-	factory: as IDWriteFactory dwrite-factory/vtbl
-	factory/CreateTextFormat dwrite-factory name 0 weight style 5 size dw-locale-name :format
-	if save? [integer/make-at as red-value! h-font format]
-	format
-]
-
-draw-text-d2d: func [
-	dc		[handle!]
-	text	[red-string!]
-	font	[red-object!]
-	para	[red-object!]
-	rc		[RECT_STRUCT]
-	/local
-		this	[this!]
-		this2	[this!]
-		obj		[IUnknown]
-		rt		[ID2D1DCRenderTarget]
-		dwrite	[IDWriteFactory]
-		str		[c-string!]
-		len		[integer!]
-		brush	[integer!]
-		layout	[integer!]
-		color	[red-tuple!]
-		clr		[integer!]
-		w		[float32!]
-		h		[float32!]
-		format	[IDWriteTextFormat]
-		flags	[integer!]
-		h-align [integer!]
-		v-align [integer!]
-][
-	flags: either TYPE_OF(para) = TYPE_OBJECT [
-		get-para-flags base para
-	][
-		1 or 4
-	]
-	case [
-		flags and 1 <> 0 [h-align: 2]
-		flags and 2 <> 0 [h-align: 1]
-		true			 [h-align: 0]
-	]
-	case [
-		flags and 4 <> 0 [v-align: 2]
-		flags and 8 <> 0 [v-align: 1]
-		true			 [v-align: 0]
-	]
-	this: as this! create-text-format font
-	format: as IDWriteTextFormat this/vtbl
-	format/SetTextAlignment this h-align
-	format/SetParagraphAlignment this v-align
-	format/SetWordWrapping this 1					;-- no wrapping
-
-	w: as float32! rc/right
-	h: as float32! rc/bottom
-	len: -1
-	str: unicode/to-utf16-len text :len yes
-	layout: 0
-	dwrite: as IDWriteFactory dwrite-factory/vtbl
-	dwrite/CreateTextLayout dwrite-factory str len as-integer this w h :layout
-
-	this: create-dc-render-target dc rc
-
-	rt: as ID2D1DCRenderTarget this/vtbl
-	rt/SetTextAntialiasMode this 1					;-- ClearType
-
-	rt/BeginDraw this
-	clr: either TYPE_OF(font) = TYPE_OBJECT [
-		color: as red-tuple! (object/get-values font) + FONT_OBJ_COLOR
-		color/array1
-	][
-		0											;-- black
-	]
-	brush: 0
-	rt/CreateSolidColorBrush this to-dx-color clr null null :brush
-	rt/DrawTextLayout this as float32! 0.0 as float32! 0.0 layout brush 0
-	rt/EndDraw this null null
-
-	this2: as this! brush
-	COM_SAFE_RELEASE(obj this2)
-	rt/Release this
-	this: as this! layout
-	COM_SAFE_RELEASE(obj this)
-]
-
-render-text-d2d: func [
-	values	[red-value!]				;-- face! values
-	hDC		[handle!]
-	rc		[RECT_STRUCT]
-	return: [logic!]
-	/local
-		font	[red-object!]
-		para	[red-object!]
-		text	[red-string!]
-][
-	text: as red-string! values + FACE_OBJ_TEXT
-	either TYPE_OF(text) = TYPE_STRING [
-		font: as red-object! values + FACE_OBJ_FONT
-		para: as red-object! values + FACE_OBJ_PARA
-		draw-text-d2d hDC text font para rc
-		true
-	][
-		false
-	]
-]
 		factory		[ID2D1Factory]
 		rt			[ID2D1HwndRenderTarget]
 		target		[integer!]
