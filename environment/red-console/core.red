@@ -431,7 +431,7 @@ terminal!: object [
 			down  [move-caret 0x1]
 		][
 			either edit-mode? 'command [
-				do-command event/key
+				do-key event/key
 			] [
 				insert skip line pos char
 				max-pos: pos: pos + 1
@@ -499,40 +499,104 @@ terminal!: object [
 		find/same lines line
 	]
 
-	commands: [
-		quit-editor [
-			switch-buffer
-			win: window-face? self/target
-			win/menu: red-console-ctx/console-menu
-			system/console/edit-mode: 'console
-			paint
-			system/console/run
+	selections: make block! 20
+	init-selections: does [
+		if empty? selections [append/only selections reduce [0 0]]
+		selections/1/1: selections/1/2: 0
+		selections
+	]
+	init-selections
+
+	find-value-pos: func [
+		text
+		pos
+		/local st
+	] [
+		highlight/add-styles/types line st: copy []
+		foreach [start length style] st [
+			if all [
+				pos >= start
+				pos <= (start + length)
+			] [
+				return reduce [start start + length style]
+			]
 		]
-		enter-editor [
-			system/console/edit-mode: 'insert
-		]
-		left  [move-caret -1]
-		right [move-caret 1]
-		up	  [move-caret 0x-1]
-		down  [move-caret 0x1]
+	]
+
+	select-caret: does [
+		selections/1/1: pos
+		selections/1/2: pos + 1
 	]
 
 	do-command: function [
+		cmd
+	] [
+		parse cmd [
+			some [
+				'quit-editor (
+					switch-buffer
+					win: window-face? self/target
+					win/menu: red-console-ctx/console-menu
+					system/console/edit-mode: 'console
+					paint
+					system/console/run
+				)
+			|	'enter-editor (system/console/edit-mode: 'insert)
+			|	'left	(
+					move-caret -1
+					select-caret
+				)
+			|	'right	(
+					move-caret 1
+					select-caret
+				)
+			|	'up		(
+					move-caret 0x-1
+					select-caret
+				)
+			|	'down	(
+					move-caret 0x1
+					select-caret
+				)
+			|	'value-end (
+					; TODO: define ST somewhere
+					if zero? selections/1/1 [selections/1/1: pos]
+					selections/1/2: second find-value-pos line pos
+					probe selections
+					pos: selections/1/2 - 1
+				)
+			|	'value-start (
+					; TODO: define ST somewhere
+					if zero? selections/1/2 [selections/1/2: pos]
+					selections/1/1: first find-value-pos line pos
+					probe selections
+					pos: selections/1/1 - 1
+				)
+			|	'cut-selection (
+					remove/part at line selections/1/1 selections/1/2 - selections/1/1 + 1
+				)
+			]			
+		]
+	]
+
+	do-key: function [
 		key
 	] [
-		cmd: switch key [
+		do-command switch key [
 			; control
-			#"q" ['quit-editor]
-			#"a" ['enter-editor]
-			#"i" ['enter-editor]
+			#"q" [[quit-editor]]
+			#"a" [[enter-editor]]
+			#"i" [[enter-editor]]
 			; movement
-			#"h" ['left]
-			#"j" ['down]
-			#"k" ['up]
-			#"l" ['right]
-			
+			#"h" [[left]]
+			#"j" [[down]]
+			#"k" [[up]]
+			#"l" [[right]]
+			#"b" [[value-start]]
+			#"e" [[value-end]]
+			; manipulation
+			#"y" [[cut-selection]]
 		]
-		do bind commands/:cmd self
 	]
 
 ; /BB additions

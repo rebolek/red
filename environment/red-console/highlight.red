@@ -34,6 +34,7 @@ highlight: context [
 		dst	[block! none!]
 		/part	
 			length [integer! string!]
+		/types
 		return: [block!]
 		/local
 			new s e len style c pos value cnt type process path
@@ -507,7 +508,15 @@ highlight: context [
 				]
 			)]
 		]
-		red-rules: [any-value opt wrong-delimiters]
+		any-value-types: [
+			pos: any [some ws | literal-value (
+				if type [
+					len: offset? s e
+					repend dst [index? s len type]
+				]
+			)]
+		]
+		red-rules: compose [(either types ['any-value-types] ['any-value]) opt wrong-delimiters]
 
 		unless either part [
 			parse/case/part src red-rules length
