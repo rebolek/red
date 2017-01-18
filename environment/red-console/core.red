@@ -175,7 +175,7 @@ terminal!: object [
 		len: either edit-mode? 'console [
 			length? skip lines top
 		] [
-			-1 + index? find lines line
+			-1 + index? find/same lines line
 		]
 		loop len [
 			h: h + pick heights n
@@ -215,7 +215,7 @@ terminal!: object [
 			not zero? n/y
 			not edit-mode? 'console
 		] [
-			i: index? find lines line
+			i: index? find/same lines line
 			line: pick lines case [
 				all [positive? n/y equal? i length? lines] [
 					; move down on last line - put caret to end
@@ -377,7 +377,7 @@ terminal!: object [
 				either edit-mode? 'console [
 					exit-event-loop
 				] [
-					l: find lines line
+					l: find/same lines line ; !!!!!!
 					add-line copy ""
 					if pos < length? line [
 					;	unless first next l []
@@ -393,7 +393,7 @@ terminal!: object [
 						edit-mode? 'insert
 						1 < length? lines 
 					] [
-						l: find lines line
+						l: find/same lines line
 						line: first back l
 						pos: length? line
 						remove l
@@ -407,7 +407,7 @@ terminal!: object [
 				if edit-mode? 'insert [
 					either equal? pos length? line [
 						; line end
-						l: find lines line
+						l: find/same lines line
 						move/part first next l tail first l length? first next l
 						remove next l
 					] [
