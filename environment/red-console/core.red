@@ -511,44 +511,11 @@ terminal!: object [
 		show target
 	]
 
-	paint-selects: func [
-		styles n
-		/local start-n end-n start-idx end-idx len swap?
-	][
-		if any [empty? selects 3 > length? selects][exit]
-
-		swap?: selects/1 > selects/3
-		if swap? [move/part skip selects 2 selects 2]				;-- swap start and end
-		set [start-n start-idx end-n end-idx] selects
-		if any [
-			n < start-n
-			n > end-n
-			all [start-n = end-n start-idx = end-idx]				;-- select nothing
-		][
-			if swap? [move/part skip selects 2 selects 2]
-			exit
-		]
-
-		either start-n = end-n [
-			len: end-idx - start-idx
-			if len < 0 [start-idx: end-idx len: 0 - len]
-		][
-			len: length? head pick lines n
-			case [
-				n = start-n [len: len - start-idx + 1]
-				n = end-n	[start-idx: 1 len: end-idx - 1]
-				true		[start-idx: 1]
-			]
-		]
-		append styles start-idx
-		append styles len
-		append styles select-bg
-		if swap? [move/part skip selects 2 selects 2]
-	]
-
 	paint: func [/local str cmds y n h cnt delta num end styles][
+		unless line [exit]
 		cmds: [text 0x0 text-box]
 		cmds/3: box
+		styles: box/styles
 		end: target/size/y
 		y: scroll-y
 		n: top
@@ -556,8 +523,7 @@ terminal!: object [
 		styles: box/styles
 		foreach str at lines top [
 			box/text: head str
-			highlight/add-styles head str clear styles theme
-			paint-selects styles n
+			highlight/add-styles head str clear styles
 			box/layout
 			clear styles
 			cmds/2/y: y
@@ -575,8 +541,9 @@ terminal!: object [
 		]
 		line-y: y - h
 		screen-cnt: y / line-h
+
 		update-caret
-		update-scroller line-cnt - num
+		;update-scroller line-cnt - num
 	]
 
 ; #BB additions

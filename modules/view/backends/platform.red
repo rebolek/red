@@ -293,7 +293,10 @@ system/view/platform: context [
 			_resize-we:		symbol/make "resize-we"
 			_resize-nesw:	symbol/make "resize-nesw"
 			_resize-nwse:	symbol/make "resize-nwse"
-			
+
+			on-over:		symbol/make "on-over"
+			_actors:		word/load "actors"
+
 			_text:			word/load "text"
 			_data:			word/load "data"
 			_control:		word/load "control"
@@ -364,8 +367,8 @@ system/view/platform: context [
 			_right-shift:	word/load "right-shift"
 			_left-control:	word/load "left-control"
 			_right-control:	word/load "right-control"
-			_left-menu:		word/load "left-menu"
-			_right-menu:	word/load "right-menu"
+			_left-alt:		word/load "left-alt"
+			_right-alt:		word/load "right-alt"
 			_left-command:	word/load "left-command"
 			_right-command:	word/load "right-command"
 			_caps-lock:		word/load "caps-lock"
@@ -462,8 +465,50 @@ system/view/platform: context [
 				evt/type: sym
 			]
 
+			#import  [
+			LIBM-file cdecl [
+				fabsf: "fabsf" [
+					x			[float32!]
+					return:		[float32!]
+				]
+				sinf:		 "sinf" [
+					radians		[float32!]
+					return:		[float32!]
+				]
+				cosf:		 "cosf" [
+					radians		[float32!]
+					return:		[float32!]
+				]
+				tanf:		 "tanf" [
+					radians		[float32!]
+					return:		[float32!]
+				]
+				asinf:		 "asinf" [
+					radians		[float32!]
+					return:		[float32!]
+				]
+				acosf:		 "acosf" [
+					radians		[float32!]
+					return:		[float32!]
+				]
+				atanf:		 "atanf" [
+					radians		[float32!]
+					return:		[float32!]
+				]
+				atan2f:		 "atan2f" [
+					y			[float32!]
+					x			[float32!]
+					return:		[float32!]
+				]
+			]]
+
 			;#include %android/gui.reds
-			#include %windows/gui.reds
+			#switch OS [
+				Windows  [#include %windows/gui.reds]
+				MacOSX   [#include %osx/gui.reds]
+				Android  []
+				#default [#include %gtk3/gui.reds]					;-- Linux
+			]
 		]
 	]
 
@@ -578,11 +623,15 @@ system/view/platform: context [
 	]
 
 	exit-event-loop: routine [][
-		gui/PostQuitMessage 0
+		#switch OS [
+			Windows  [gui/PostQuitMessage 0]
+			MacOSX   [gui/evt-loop-cnt: gui/evt-loop-cnt - 1]
+			#default [0]
+		]
 	]
 
-	request-font: routine [font [object!] mono? [logic!]][
-		gui/OS-request-font font mono?
+	request-font: routine [font [object!] selected [object!] mono? [logic!]][
+		gui/OS-request-font font selected mono?
 	]
 
 	request-file: routine [
@@ -615,11 +664,8 @@ system/view/platform: context [
 		state	[block!]
 		arg0	[any-type!]
 		type	[integer!]
-		/local
-			int [red-integer!]
 	][
-		int: as red-integer! block/rs-head state
-		stack/set-last gui/OS-text-box-metrics as handle! int/value arg0 type
+		stack/set-last gui/OS-text-box-metrics state arg0 type
 	]
 
 	update-scroller: routine [scroller [object!] flags [integer!]][
