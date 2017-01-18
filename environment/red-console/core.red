@@ -47,7 +47,6 @@ terminal!: object [
 	max-lines:	1000							;-- maximum size of the line buffer
 	full?:		no								;-- is line buffer full?
 	ask?:		no								;-- is it in ask loop
-	mouse-up?:	yes
 
 	top:		1								;-- index of the first visible line in the line buffer
 	line:		none							;-- current editing line
@@ -60,33 +59,14 @@ terminal!: object [
 	line-h:		0								;-- average line height
 	page-cnt:	0								;-- number of lines in one page
 	line-cnt:	0								;-- number of lines in total (include wrapped lines)
-	screen-cnt: 0								;-- number of lines on screen
 	delta-cnt:	0
+	screen-cnt: 0
 
 	box:		make text-box! []
 	caret:		none
 	scroller:	none
 	target:		none
 	tips:		none
-
-	background: none
-	select-bg:	none							;-- selected text background color
-
-	theme: #(
-		background	[252.252.252]
-		selected	[200.200.255]				;-- selected text background color
-		string!		[120.120.61]
-		integer!	[255.0.0]
-		float!		[255.0.0]
-		pair!		[255.0.0]
-		percent!	[255.128.128]
-		datatype!	[0.222.0]
-		lit-word!	[0.0.255 bold]
-		set-word!	[0.0.255]
-		tuple!		[0.0.0]
-		url!		[0.0.255 underline]
-		comment!	[128.128.128]
-	)
 
 	draw: get 'system/view/platform/draw-face
 
@@ -124,7 +104,6 @@ terminal!: object [
 
 	reset-block: func [blk [block!] /advance /local s][
 		s: either advance [next blk][blk]
-		probe "head3"
 		blk: head blk
 		move/part s blk max-lines
 		clear s
@@ -149,12 +128,6 @@ terminal!: object [
 		][
 			full?: max-lines = length? lines
 		]
-	]
-
-	update-theme: func [][
-		background: first select theme 'background
-		select-bg:  reduce ['backdrop first select theme 'selected]
-		target/color: background
 	]
 
 	update-cfg: func [font cfg][
@@ -225,63 +198,16 @@ terminal!: object [
 				if caret/visible? [caret/visible?: no]
 			]
 		]
-		probe ["--- update caret"]
 	]
 
-	offset-to-line: func [offset [pair!] /local h y start end n][
-		;if offset/y > (line-y + last heights) [exit]
-
-		y: offset/y - scroll-y
-		end: line-y - scroll-y
-		h: 0
-		n: top
-		until [
-			h: h + pick heights n
-			if y < h [break]
-			n: n + 1
-			h > end
-		]
-		if n > length? lines [n: length? lines]
-		box/text: head pick lines n
-		box/layout
-		start: pick heights n
-		offset/y: y + start - h
-		append selects n
-		append selects box/index? offset
-	]
-
-	mouse-to-caret: func [event [event!] /local offset][
+	mouse-down: func [event [event!] /local offset][
 		offset: event/offset
 		if any [offset/y < line-y offset/y > (line-y + last heights)][exit]
-
-		offset/y: offset/y - line-y
 		box/text: head line
 		box/layout
 		pos: (box/index? offset) - (index? line)
 		if pos < 0 [pos: 0]
 		update-caret
-	]
-
-	mouse-down: func [event [event!]][
-		mouse-up?: no
-		clear selects
-
-		offset-to-line event/offset
-		mouse-to-caret event
-	]
-
-	mouse-up: func [event [event!]][
-		mouse-up?: yes
-		show target
-	]
-
-	mouse-move: func [event [event!]][
-		if any [mouse-up? empty? selects][exit]
-
-		clear skip selects 2
-		offset-to-line event/offset
-		mouse-to-caret event
-		show target
 	]
 
 	move-caret: func [n /local i][
@@ -520,7 +446,6 @@ terminal!: object [
 		y: scroll-y
 		n: top
 		num: line-cnt
-		styles: box/styles
 		foreach str at lines top [
 			box/text: head str
 			highlight/add-styles head str clear styles
@@ -575,8 +500,8 @@ terminal!: object [
 ]
 
 console!: make face! [
-	type: 'base color: 0.0.128 offset: 0x0 size: 400x400 cursor: 'I-beam
-	flags: [Direct2D scrollable all-over]
+	type: 'base color: white offset: 0x0 size: 400x400 cursor: 'I-beam
+	flags: [Direct2D scrollable]
 	menu: [
 		"Copy^-Ctrl+C"		 copy
 		"Paste^-Ctrl+V"		 paste
@@ -602,12 +527,6 @@ console!: make face! [
 		]
 		on-down: func [face [object!] event [event!]][
 			extra/mouse-down event
-		]
-		on-up: func [face [object!] event [event!]][
-			extra/mouse-up event
-		]
-		on-over: func [face [object!] event [event!]][
-			extra/mouse-move event
 		]
 		on-menu: func [face [object!] event [event!]][
 			switch event/picked [
@@ -645,8 +564,8 @@ console!: make face! [
 			size:  cfg/font-size
 			color: cfg/font-color
 		]
+		self/color:	cfg/background
 		extra/update-cfg self/font cfg
-		extra/update-theme
 	]
 
 	extra: make terminal! []
