@@ -190,6 +190,10 @@ terminal!: object [
 			h: h + pick heights n
 			n: n + 1
 		]
+		; #BB: watch this for troubles in console!!!
+		box/text: head first at-line
+		box/layout
+		;
 		offset: box/offset? p + index? line
 		offset/y: offset/y + h + scroll-y
 		if ask? [
@@ -219,6 +223,7 @@ terminal!: object [
 		if negative? pos [pos: 0]
 		if pos > length? line [pos: pos - n/x]
 		unless zero? n/x [max-pos: pos]
+
 		; y-movement (editor only)
 		if all [
 			not zero? n/y
@@ -377,6 +382,7 @@ terminal!: object [
 						; switch in editor to COMMAND mode
 					;	win/menu: red-console-ctx/editor-menu
 						system/console/edit-mode: 'command
+						self/target/color: 128.128.128
 					]
 				]
 				paint
@@ -538,10 +544,14 @@ terminal!: object [
 					win: window-face? self/target
 					win/menu: red-console-ctx/console-menu
 					system/console/edit-mode: 'console
+					self/target/color: white
 					paint
 					system/console/run
 				)
-			|	'enter-editor (system/console/edit-mode: 'insert)
+			|	'enter-editor (
+					system/console/edit-mode: 'insert
+					self/target/color: white
+				)
 			|	'left	(
 					move-caret -1
 					select-caret
@@ -562,14 +572,12 @@ terminal!: object [
 					; TODO: define ST somewhere
 					if zero? selections/1/1 [selections/1/1: pos]
 					selections/1/2: second find-value-pos line pos
-					probe selections
 					pos: selections/1/2 - 1
 				)
 			|	'value-start (
 					; TODO: define ST somewhere
 					if zero? selections/1/2 [selections/1/2: pos]
 					selections/1/1: first find-value-pos line pos
-					probe selections
 					pos: selections/1/1 - 1
 				)
 			|	'cut-selection (
