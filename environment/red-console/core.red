@@ -23,11 +23,6 @@ edit-mode?: func [mode] [
 	equal? mode system/console/edit-mode
 ]
 
-at-line: func [
-	"Return LINES at current line"
-] [
-	find/same lines line
-]
 ;
 
 terminal!: object [
@@ -427,8 +422,12 @@ terminal!: object [
 			up	  [probe "up" move-caret 0x-1]
 			down  [probe "down" move-caret 0x1]
 		][
-			insert skip line pos char
-			max-pos: pos: pos + 1
+			either edit-mode? 'command [
+				probe "Do some commands, nigga"
+			] [
+				insert skip line pos char
+				max-pos: pos: pos + 1
+			]
 		]
 		target/rate: 6
 		if caret/rate [caret/rate: none caret/color: 0.0.0.1]
@@ -484,6 +483,12 @@ terminal!: object [
 		line: first buffer/lines ; FIXME: hack, can’t find where line is set
 
 		buffer: make temp-buffer []
+	]
+
+	at-line: func [
+		"Return LINES at current line"
+	] [
+		find/same lines line
 	]
 
 ; /BB additions
