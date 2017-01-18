@@ -181,14 +181,7 @@ terminal!: object [
 			h: h + pick heights n
 			n: n + 1
 		]
-		offset: either edit-mode? 'console [
-			box/offset? p + index? line
-		] [
-			; #BB: custom sizing routine for editor
-			; NOTE:	using size-text directly gives wrong result (not sure why)
-			;		but this workaround works
-			as-pair p * (1 + first size-text/with target "X") 0
-		]
+		offset: box/offset? p + index? line
 		offset/y: offset/y + h + scroll-y
 		if ask? [
 			either offset/y < target/size/y [
