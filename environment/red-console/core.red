@@ -48,6 +48,11 @@ terminal!: object [
 		line: 		none
 	]
 
+	selection: [
+		start: 0x0
+		end: 0x0
+	]
+
 	max-lines:	1000							;-- maximum size of the line buffer
 	full?:		no								;-- is line buffer full?
 	ask?:		no								;-- is it in ask loop
@@ -422,11 +427,10 @@ terminal!: object [
 			]
 			left  [move-caret -1]
 			right [move-caret 1]
-			up	  [probe "up" move-caret 0x-1]
-			down  [probe "down" move-caret 0x1]
+			up	  [move-caret 0x-1]
+			down  [move-caret 0x1]
 		][
 			either edit-mode? 'command [
-				probe "Do some commands, nigga"
 				do-command event/key
 			] [
 				insert skip line pos char
@@ -495,18 +499,40 @@ terminal!: object [
 		find/same lines line
 	]
 
-	do-command: function [
-		cmd
-	] [
-		switch cmd [
-			#"q" [
-				switch-buffer
-				win: window-face? self/target
-				win/menu: red-console-ctx/console-menu
-				system/console/edit-mode: 'console
-				paint
-			]
+	commands: [
+		quit-editor [
+			switch-buffer
+			win: window-face? self/target
+			win/menu: red-console-ctx/console-menu
+			system/console/edit-mode: 'console
+			paint
+			system/console/run
 		]
+		enter-editor [
+			system/console/edit-mode: 'insert
+		]
+		left  [move-caret -1]
+		right [move-caret 1]
+		up	  [move-caret 0x-1]
+		down  [move-caret 0x1]
+	]
+
+	do-command: function [
+		key
+	] [
+		cmd: switch key [
+			; control
+			#"q" ['quit-editor]
+			#"a" ['enter-editor]
+			#"i" ['enter-editor]
+			; movement
+			#"h" ['left]
+			#"j" ['down]
+			#"k" ['up]
+			#"l" ['right]
+			
+		]
+		do bind commands/:cmd self
 	]
 
 ; /BB additions
