@@ -378,7 +378,7 @@ terminal!: object [
 					exit-event-loop
 				] [
 					l: find lines line
-					append/only lines copy ""
+					add-line copy ""
 					if pos < length? line [
 					;	unless first next l []
 						move/part skip line pos first next l (length? line) - pos
@@ -479,14 +479,6 @@ terminal!: object [
 
 		buffer: make temp-buffer []
 	]
-
-	init-buffer: does [
-		insert buffer/lines make string! 1000
-		insert buffer/nlines 1
-		insert buffer/heights 17 ; FIXME: some hardcoded value to make it work
-	]
-
-	init-buffer
 
 ; /BB additions
 
