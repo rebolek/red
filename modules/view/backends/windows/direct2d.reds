@@ -830,7 +830,7 @@ render-text-d2d: func [
 	][
 		false
 	]
-]er!]
+]
 		factory		[ID2D1Factory]
 		rt			[ID2D1HwndRenderTarget]
 		target		[integer!]
