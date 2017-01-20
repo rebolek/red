@@ -56,6 +56,7 @@ terminal!: object [
 	max-lines:	1000							;-- maximum size of the line buffer
 	full?:		no								;-- is line buffer full?
 	ask?:		no								;-- is it in ask loop
+	mouse-up?:	yes
 
 	top:		1								;-- index of the first visible line in the line buffer
 	line:		none							;-- current editing line
@@ -68,14 +69,33 @@ terminal!: object [
 	line-h:		0								;-- average line height
 	page-cnt:	0								;-- number of lines in one page
 	line-cnt:	0								;-- number of lines in total (include wrapped lines)
+	screen-cnt: 0								;-- number of lines on screen
 	delta-cnt:	0
-	screen-cnt: 0
 
 	box:		make text-box! []
 	caret:		none
 	scroller:	none
 	target:		none
 	tips:		none
+
+	background: none
+	select-bg:	none							;-- selected text background color
+
+	theme: #(
+		background	[252.252.252]
+		selected	[200.200.255]				;-- selected text background color
+		string!		[120.120.61]
+		integer!	[255.0.0]
+		float!		[255.0.0]
+		pair!		[255.0.0]
+		percent!	[255.128.128]
+		datatype!	[0.222.0]
+		lit-word!	[0.0.255 bold]
+		set-word!	[0.0.255]
+		tuple!		[0.0.0]
+		url!		[0.0.255 underline]
+		comment!	[128.128.128]
+	)
 
 	draw: get 'system/view/platform/draw-face
 
@@ -137,6 +157,12 @@ terminal!: object [
 		][
 			full?: max-lines = length? lines
 		]
+	]
+
+	update-theme: func [][
+		background: first select theme 'background
+		select-bg:  reduce ['backdrop first select theme 'selected]
+		target/color: background
 	]
 
 	update-cfg: func [font cfg][
@@ -206,9 +232,33 @@ terminal!: object [
 		]
 	]
 
-	mouse-down: func [event [event!] /local offset][
+	offset-to-line: func [offset [pair!] /local h y start end n][
+		;if offset/y > (line-y + last heights) [exit]
+
+		y: offset/y - scroll-y
+		end: line-y - scroll-y
+		h: 0
+		n: top
+		until [
+			h: h + pick heights n
+			if y < h [break]
+			n: n + 1
+			h > end
+		]
+		if n > length? lines [n: length? lines]
+		box/text: head pick lines n
+		box/layout
+		start: pick heights n
+		offset/y: y + start - h
+		append selects n
+		append selects box/index? offset
+	]
+
+	mouse-to-caret: func [event [event!] /local offset][
 		offset: event/offset
 		if any [offset/y < line-y offset/y > (line-y + last heights)][exit]
+
+		offset/y: offset/y - line-y
 		box/text: head line
 		box/layout
 		pos: (box/index? offset) - (index? line)
@@ -216,10 +266,30 @@ terminal!: object [
 		update-caret
 	]
 
-	move-caret: func [n /local i][
-		unless pair? n [n: as-pair n 0]
-		if pos > length? line [pos: length? line] ; #BB: make sure, we are not after line end
-		pos: pos + n/x
+	mouse-down: func [event [event!]][
+		mouse-up?: no
+		clear selects
+
+		offset-to-line event/offset
+		mouse-to-caret event
+	]
+
+	mouse-up: func [event [event!]][
+		mouse-up?: yes
+		show target
+	]
+
+	mouse-move: func [event [event!]][
+		if any [mouse-up? empty? selects][exit]
+
+		clear skip selects 2
+		offset-to-line event/offset
+		mouse-to-caret event
+		show target
+	]
+
+	move-caret: func [n][
+		pos: pos + n
 		if negative? pos [pos: 0]
 		if pos > length? line [pos: pos - n/x]
 		unless zero? n/x [max-pos: pos]
@@ -449,18 +519,54 @@ terminal!: object [
 		show target
 	]
 
+	paint-selects: func [
+		styles n
+		/local start-n end-n start-idx end-idx len swap?
+	][
+		if any [empty? selects 3 > length? selects][exit]
+
+		swap?: selects/1 > selects/3
+		if swap? [move/part skip selects 2 selects 2]				;-- swap start and end
+		set [start-n start-idx end-n end-idx] selects
+		if any [
+			n < start-n
+			n > end-n
+			all [start-n = end-n start-idx = end-idx]				;-- select nothing
+		][
+			if swap? [move/part skip selects 2 selects 2]
+			exit
+		]
+
+		either start-n = end-n [
+			len: end-idx - start-idx
+			if len < 0 [start-idx: end-idx len: 0 - len]
+		][
+			len: length? head pick lines n
+			case [
+				n = start-n [len: len - start-idx + 1]
+				n = end-n	[start-idx: 1 len: end-idx - 1]
+				true		[start-idx: 1]
+			]
+		]
+		append styles start-idx
+		append styles len
+		append styles select-bg
+		if swap? [move/part skip selects 2 selects 2]
+	]
+
 	paint: func [/local str cmds y n h cnt delta num end styles][
 		unless line [exit]
 		cmds: [text 0x0 text-box]
 		cmds/3: box
-		styles: box/styles
 		end: target/size/y
 		y: scroll-y
 		n: top
 		num: line-cnt
+		styles: box/styles
 		foreach str at lines top [
 			box/text: head str
-			highlight/add-styles head str clear styles
+			highlight/add-styles head str clear styles theme
+			paint-selects styles n
 			box/layout
 			clear styles
 			cmds/2/y: y
@@ -613,7 +719,7 @@ terminal!: object [
 
 console!: make face! [
 	type: 'base color: white offset: 0x0 size: 400x400 cursor: 'I-beam
-	flags: [Direct2D scrollable]
+	flags: [Direct2D scrollable all-over]
 	menu: [
 		"Copy^-Ctrl+C"		 copy
 		"Paste^-Ctrl+V"		 paste
@@ -639,6 +745,12 @@ console!: make face! [
 		]
 		on-down: func [face [object!] event [event!]][
 			extra/mouse-down event
+		]
+		on-up: func [face [object!] event [event!]][
+			extra/mouse-up event
+		]
+		on-over: func [face [object!] event [event!]][
+			extra/mouse-move event
 		]
 		on-menu: func [face [object!] event [event!]][
 			switch event/picked [
@@ -676,8 +788,8 @@ console!: make face! [
 			size:  cfg/font-size
 			color: cfg/font-color
 		]
-		self/color:	cfg/background
 		extra/update-cfg self/font cfg
+		extra/update-theme
 	]
 
 	extra: make terminal! []
