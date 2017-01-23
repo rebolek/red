@@ -457,7 +457,9 @@ terminal!: object [
 					;	win/menu: red-console-ctx/editor-menu
 						system/console/edit-mode: 'command
 						self/target/color: 128.128.128
+						probe "beg sel-car"
 						select-caret
+						probe "end sel-car"
 					]
 				]
 				paint
@@ -622,6 +624,7 @@ terminal!: object [
 		/local st
 	] [
 		highlight/add-styles/types line st: copy [] theme
+		prober [pos start length]
 		foreach [start length style] st [
 			if all [
 				pos >= start
@@ -635,10 +638,13 @@ terminal!: object [
 	select-caret: does [
 		; line xpos
 		clear selects
-		repend selects [
-			index? at-line pos
-			index? at-line pos + 1
+		unless zero? length? line [
+			repend selects [
+				index? at-line pos
+				index? at-line pos + 1
+			]
 		]
+		prober selects
 	]
 
 	do-command: function [
