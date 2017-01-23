@@ -53,7 +53,7 @@ terminal!: object [
 		end: 0x0
 	]
 
-	max-lines:	1000							;-- maximum size of the line buffer
+	max-lines:	10000							;-- maximum size of the line buffer
 	full?:		no								;-- is line buffer full?
 	ask?:		no								;-- is it in ask loop
 	mouse-up?:	yes
@@ -95,6 +95,9 @@ terminal!: object [
 		tuple!		[0.0.0]
 		url!		[0.0.255 underline]
 		comment!	[128.128.128]
+		op!			[0.255.255]
+		word!		[0.0.80]
+		path! 		[80.0.80]
 	)
 
 	draw: get 'system/view/platform/draw-face
@@ -203,7 +206,6 @@ terminal!: object [
 	]
 
 	update-caret: func [/local p len n s h lh offset][
-		prober ["*** update caret"]
 		n: top
 		h: 0
 		p: min pos length? line
@@ -619,9 +621,7 @@ terminal!: object [
 		pos
 		/local st
 	] [
-		prober ["fvp" text pos]
 		highlight/add-styles/types line st: copy [] theme
-		prober "xxx"
 		foreach [start length style] st [
 			if all [
 				pos >= start
@@ -639,7 +639,6 @@ terminal!: object [
 			index? at-line pos
 			index? at-line pos + 1
 		]
-		probe selects
 	]
 
 	do-command: function [
@@ -691,12 +690,20 @@ terminal!: object [
 						index? at-line first find-value-pos line pos
 						index? at-line pos + 1
 					]
-					pos: second selects
+					pos: (second selects) - 1
 				)
 			|	'cut-selection (
 					remove/part at line selection/start/x selection/end/x - selection/start/x + 1
 				)
-			]			
+			]	
+			|	'paste-source (
+					foreach line split mold body-of :find-value-pos newline [
+						add-line probe line
+						calc-last-line
+						line: first lines
+						pos: 1
+					] 
+				)		
 		]
 	]
 
@@ -717,6 +724,9 @@ terminal!: object [
 			#"e" [[value-end]]
 			; manipulation
 			#"y" [[cut-selection]]
+
+			; temporary debug commands
+			#"s" [[paste-source]]
 		]
 	]
 
