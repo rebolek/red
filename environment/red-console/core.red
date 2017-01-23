@@ -455,6 +455,7 @@ terminal!: object [
 					;	win/menu: red-console-ctx/editor-menu
 						system/console/edit-mode: 'command
 						self/target/color: 128.128.128
+						select-caret
 					]
 				]
 				paint
@@ -613,20 +614,14 @@ terminal!: object [
 		find/same lines line
 	]
 
-	selections: make block! 20
-	init-selections: does [
-		if empty? selections [append/only selections reduce [0 0]]
-		selections/1/1: selections/1/2: 0
-		selections
-	]
-	init-selections
-
 	find-value-pos: func [
 		text
 		pos
 		/local st
 	] [
-		highlight/add-styles/types line st: copy []
+		prober ["fvp" text pos]
+		highlight/add-styles/types line st: copy [] theme
+		prober "xxx"
 		foreach [start length style] st [
 			if all [
 				pos >= start
@@ -638,14 +633,19 @@ terminal!: object [
 	]
 
 	select-caret: does [
-		selections/1/1: pos
-		selections/1/2: pos + 1
+		; line xpos
+		clear selects
+		repend selects [
+			index? at-line pos
+			index? at-line pos + 1
+		]
+		probe selects
 	]
 
 	do-command: function [
 		cmd
 	] [
-		parse cmd [
+		parse probe cmd [
 			some [
 				'quit-editor (
 					switch-buffer
@@ -677,19 +677,24 @@ terminal!: object [
 					select-caret
 				)
 			|	'value-end (
-					; TODO: define ST somewhere
-					if zero? selections/1/1 [selections/1/1: pos]
-					selections/1/2: second find-value-pos line pos
-					pos: selections/1/2 - 1
+					prober [line pos]
+					clear selects
+					append selects probe reduce [
+						index? at-line pos
+						index? at-line second find-value-pos line pos
+					]
+					pos: (last selects) - 1
 				)
 			|	'value-start (
-					; TODO: define ST somewhere
-					if zero? selections/1/2 [selections/1/2: pos]
-					selections/1/1: first find-value-pos line pos
-					pos: selections/1/1 - 1
+					clear selects
+					repend selects [
+						index? at-line first find-value-pos line pos
+						index? at-line pos + 1
+					]
+					pos: second selects
 				)
 			|	'cut-selection (
-					remove/part at line selections/1/1 selections/1/2 - selections/1/1 + 1
+					remove/part at line selection/start/x selection/end/x - selection/start/x + 1
 				)
 			]			
 		]
