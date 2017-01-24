@@ -508,10 +508,21 @@ terminal!: object [
 					]
 				]
 			]
-			left  [move-caret -1]
-			right [move-caret 1]
-			up	  [move-caret 0x-1]
-			down  [move-caret 0x1]
+			left  [
+				move-caret -1
+			;	if edit-mode? 'command [select-caret]
+			]
+			right [
+				move-caret 1
+			;	if edit-mode? 'command [select-caret]
+			]
+			up	  [
+				move-caret 0x-1
+			;	if edit-mode? 'command [select-caret]
+			]
+			down  [
+				move-caret 0x1
+			]
 		][
 			either edit-mode? 'command [
 				do-key event/key
@@ -620,19 +631,42 @@ terminal!: object [
 
 	locate-value: func [
 		text
-		pos
+		posn
 		/local st
 	] [
+		; TODO: what to do on whitespace?
 		prober  "---LOCATE"
 		highlight/add-styles/types line st: copy [] theme
 		foreach [start length style] probe st [
-			prober ["locate:" pos "s/l" start length "e" start + length style mold at line pos]
+			prober ["locate:" posn "s/l" start length "e" start + length style mold at line posn]
 			if all [
-				pos >= start
-				pos < (start + length)
+				posn >= start
+				posn < (start + length)
 			] [
 				return reduce [start start + length style]
 			]
+		]
+	]
+
+	select-value: function [
+		posn 		[pair!] "Position in text"
+		/start 		"Select from value start to POS"
+		/end 		"Select from POS to value end"
+		/before		"Select also whitespace before value"
+		/after		"Select also whitespace after value"
+	] [
+		prober ["SELVAL" posn]
+		if mark: locate-value pick lines posn/y posn/x [
+			case/all [
+				;  FIXME: cannot use both /begin and /end (makes little sense, but anyway)
+				start 	[mark/2: posn/x + 1]
+				end 	[mark/1: posn/x]
+				; FIXME: pretty naive implementation
+				before	[mark/1: mark/1 - 1]
+				after	[mark/2: mark/2 + 1]
+			]
+			clear selects
+			repend selects [posn/y mark/1 posn/y mark/2]
 		]
 	]
 
@@ -645,6 +679,23 @@ terminal!: object [
 				index? at-line pos + 1
 			]
 		]
+	]
+
+	find-selection: function [] [
+		; NOTE: expects only single-line strings
+		prober selects
+		l: pick lines selects/1
+		text: copy/part at l selects/2 selects/4 - selects/2
+		prober ["FIND:" mold text]
+		clear selects
+		forall lines [
+			if mark: find lines/1 text [
+				repend selects [index? lines index? mark index? lines (index? mark) + length? text]
+				prober ["found at" index? lines]
+			]
+		]
+		probe selects
+	;	paint
 	]
 
 	do-command: function [
@@ -687,30 +738,33 @@ terminal!: object [
 					prober ["value:" mold copy/part at line first val-pos (second val-pos) - first val-pos]
 				)
 			|	'value-end (
-					prober [line pos]
-					clear selects
-					prober "xxxxx before error"
-					append selects probe reduce [
-						index? at-line pos + 1
-						index? at-line second locate-value line pos
+					if value: select-value/end as-pair pos index? at-line [
+						case [
+							; at the end of word, select next one
+							equal? pos + 1 fourth value (
+								; FIXME + 3 is offset + whitespace + first char of next word
+								; 		there can be more whitespaces, or it’s last word
+								value: select-value/before as-pair pos + 3 index? at-line
+							)
+						]
+						pos: -1 + fourth value
 					]
-					prober "------------"
-					pos: (last selects) - 1
 				)
 			|	'value-start (
-					prober [line pos]
-					clear selects
-					prober ["+++VS" pos mold at line pos mold locate-value line pos]
-					if equal? pos + 1 first val-pos: locate-value line pos [
-						prober "======EQUAL"
-						val-pos: locate-value line probe pos - 2
+					if value: select-value/start as-pair pos + 1 index? at-line [
+						case [
+							; at the start of word, select previous one
+							equal? pos + 1 second value (
+								; FIXME - 3 is offset + whitespace + last char of prev word
+								; 		there can be more whitespaces, or it’s last word
+								value: select-value/after as-pair pos - 3 index? at-line
+							)
+						]
+						pos: -1 + second value
 					]
-					prober ["DBG" val-pos]
-					repend selects [
-						index? at-line first val-pos
-						index? at-line pos + 1
-					]
-					pos: (second selects) - 1
+				)
+			|	'select-value (
+					select-value as-pair pos index? at-line
 				)
 			|	'cut-selection (
 					remove/part at line selection/start/x selection/end/x - selection/start/x + 1
@@ -718,12 +772,15 @@ terminal!: object [
 			]	
 			|	'paste-source (
 					foreach line split mold body-of :locate-value newline [
-						add-line probe line
+						add-line line
 						calc-last-line
 						line: first lines
 						pos: 1
 					] 
-				)		
+				)
+			|	'find-selection (
+					find-selection
+				)
 		]
 	]
 
@@ -748,6 +805,8 @@ terminal!: object [
 			; temporary debug commands
 			#"s" [[paste-source]]
 			#"d" [[debug]]
+			#"v" [[select-value]]
+			#"f" [[find-selection]]
 		]
 	]
 
