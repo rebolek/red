@@ -495,7 +495,7 @@ highlight: context [
 				]
 			)]
 		]
-		red-rules: compose [(either types ['any-value-types] ['any-value]) opt wrong-delimiters]
+		red-rules: [(if types [any-value: any-value-types]) any-value opt wrong-delimiters]
 
 		unless either part [
 			parse/case/part src red-rules length
