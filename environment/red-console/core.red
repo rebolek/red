@@ -92,7 +92,7 @@ terminal!: object [
 		datatype!	[0.222.0]
 		lit-word!	[0.0.255 bold]
 		set-word!	[0.0.255]
-		tuple!		[0.0.0]
+		tuple!		[255.0.0]
 		url!		[0.0.255 underline]
 		comment!	[128.128.128]
 		op!			[0.255.255]
@@ -618,17 +618,18 @@ terminal!: object [
 		find/same lines line
 	]
 
-	find-value-pos: func [
+	locate-value: func [
 		text
 		pos
 		/local st
 	] [
+		prober  "---LOCATE"
 		highlight/add-styles/types line st: copy [] theme
-		prober [pos start length]
-		foreach [start length style] st [
+		foreach [start length style] probe st [
+			prober ["locate:" pos "s/l" start length "e" start + length style mold at line pos]
 			if all [
 				pos >= start
-				pos <= (start + length)
+				pos < (start + length)
 			] [
 				return reduce [start start + length style]
 			]
@@ -644,7 +645,6 @@ terminal!: object [
 				index? at-line pos + 1
 			]
 		]
-		prober selects
 	]
 
 	do-command: function [
@@ -681,19 +681,33 @@ terminal!: object [
 					move-caret 0x1
 					select-caret
 				)
+			|	'debug (
+					prober ["===DEBUG===^/pos:" as-pair pos index? at-line]
+					val-pos: probe locate-value line pos
+					prober ["value:" mold copy/part at line first val-pos (second val-pos) - first val-pos]
+				)
 			|	'value-end (
 					prober [line pos]
 					clear selects
+					prober "xxxxx before error"
 					append selects probe reduce [
-						index? at-line pos
-						index? at-line second find-value-pos line pos
+						index? at-line pos + 1
+						index? at-line second locate-value line pos
 					]
+					prober "------------"
 					pos: (last selects) - 1
 				)
 			|	'value-start (
+					prober [line pos]
 					clear selects
+					prober ["+++VS" pos mold at line pos mold locate-value line pos]
+					if equal? pos + 1 first val-pos: locate-value line pos [
+						prober "======EQUAL"
+						val-pos: locate-value line probe pos - 2
+					]
+					prober ["DBG" val-pos]
 					repend selects [
-						index? at-line first find-value-pos line pos
+						index? at-line first val-pos
 						index? at-line pos + 1
 					]
 					pos: (second selects) - 1
@@ -703,7 +717,7 @@ terminal!: object [
 				)
 			]	
 			|	'paste-source (
-					foreach line split mold body-of :find-value-pos newline [
+					foreach line split mold body-of :locate-value newline [
 						add-line probe line
 						calc-last-line
 						line: first lines
@@ -733,6 +747,7 @@ terminal!: object [
 
 			; temporary debug commands
 			#"s" [[paste-source]]
+			#"d" [[debug]]
 		]
 	]
 
