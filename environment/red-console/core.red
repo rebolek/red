@@ -680,6 +680,17 @@ terminal!: object [
 			]
 		]
 	]
+	expand-selection: function [
+		dir
+	] [
+		switch dir [
+			right [
+				mark: back tail selects
+				mark/1: mark/1 + 1 ; TODO boundaries checking
+				pos: mark/1 - 1
+			]
+		]
+	]
 
 	find-selection: function [] [
 		; NOTE: expects only single-line strings
@@ -696,6 +707,27 @@ terminal!: object [
 		]
 		probe selects
 	;	paint
+	]
+
+	pick-selection: function [
+		; TODO: selection ID
+	] [
+;		probe "pick-sel"
+		copy/part at pick lines selects/1 selects/2 selects/2 + selects/4
+	]
+
+	change-selection: function [
+		; TODO: selection ID
+		text
+	] [
+;		probe "chng-sel"
+		change/part at pick lines selects/1 selects/2 text selects/2 + selects/4
+	]
+
+	reduce-selection: function [] [
+		; TODO: only one selection support now
+		; TODO: only one line supported
+		change-selection form reduce load pick-selection
 	]
 
 	do-command: function [
@@ -731,6 +763,10 @@ terminal!: object [
 			|	'down	(
 					move-caret 0x1
 					select-caret
+				)
+			|	'select set value ['left | 'right | 'up | 'down] (
+					move-caret select [left -1 right 1 up 0x-1 down 0x1] value
+					expand-selection value
 				)
 			|	'debug (
 					prober ["===DEBUG===^/pos:" as-pair pos index? at-line]
@@ -769,7 +805,7 @@ terminal!: object [
 			|	'cut-selection (
 					remove/part at line selection/start/x selection/end/x - selection/start/x + 1
 				)
-			]	
+			|	'reduce-selection (reduce-selection)
 			|	'paste-source (
 					foreach line split mold body-of :locate-value newline [
 						add-line line
@@ -781,6 +817,7 @@ terminal!: object [
 			|	'find-selection (
 					find-selection
 				)
+			]	
 		]
 	]
 
@@ -797,6 +834,10 @@ terminal!: object [
 			#"j" [[down]]
 			#"k" [[up]]
 			#"l" [[right]]
+			#"H" [[select left]]
+			#"J" [[select down]]
+			#"K" [[select up]]
+			#"L" [[select right]]			
 			#"b" [[value-start]]
 			#"e" [[value-end]]
 			; manipulation
@@ -807,6 +848,7 @@ terminal!: object [
 			#"d" [[debug]]
 			#"v" [[select-value]]
 			#"f" [[find-selection]]
+			#"r" [[reduce-selection]]
 		]
 	]
 
