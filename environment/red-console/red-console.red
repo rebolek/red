@@ -10,10 +10,16 @@ Red [
 	Rights:  "Copyright (C) 2016 Qingtian Xie. All rights reserved."
 ]
 
+print "console.red"
+
 #include %../console/engine.red
+print "engine.red"
 #include %highlight.red
+print "highlight.red"
 #include %tips.red
+print "tips.red"
 #include %core.red
+print "core.red"
 
 ask: function [
 	question [string!]
@@ -36,8 +42,17 @@ ask: function [
 red-console-ctx: context [
 	cfg-path:	none
 	cfg:		none
-	;font-name:	pick ["Fixedsys" "Consolas"] make logic! find [5.1.0 5.0.0] system/view/platform/version
-	font-name: "Menlo"
+	
+	font-name: probe case [
+		all [
+			equal? 'Windows system/platform
+			equal? 5.0.0 system/view/platform/version
+		] ["Fixedsys"]
+		equal? 'Windows system/platform ["Consolas"]
+		equal? 'MacOSX system/platform ["Menlo"]
+	]
+
+	font-name: "Fixedsys"
 
 	tips: make tips! [visible?: no]
 	console: make console! []

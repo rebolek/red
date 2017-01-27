@@ -680,10 +680,13 @@ terminal!: object [
 			]
 		]
 	]
-	expand-selection: function [
-		dir
+
+	expand-selection: func [
+		direction
+		/local posit
 	] [
-		switch dir [
+		probe mold direction
+		switch direction [
 			right [
 				mark: back tail selects
 				mark/1: mark/1 + 1 ; TODO boundaries checking
@@ -733,6 +736,7 @@ terminal!: object [
 	do-command: function [
 		cmd
 	] [
+		value: none
 		parse probe cmd [
 			some [
 				'quit-editor (
