@@ -432,59 +432,61 @@ terminal!: object [
 		]
 	]
 
-	press-key: func [event [event!] /local char l win][
+	console-keys: func [event [event!] /local char][
 		if process-shortcuts event [exit]
-		char: probe event/key
+		char: event/key
 		switch/default char [
-			#"^[" [									;-- ESCAPE key
-				; TODO: this probably ignores normal ESC function in console
-				;		in console, switching should occur only when on start new-line
-				;		and when idle
-				probe "*** buffer is"
-				probe buffer
-				; switch to/from editing mode
+			#"^[" [
 				win: window-face? self/target
-				switch system/console/edit-mode [
-					console [
-						; switch to editor (INSERT mode)
-						win/menu: red-console-ctx/editor-menu
-						exit-event-loop
-						system/console/edit-mode: 'insert
-						switch-buffer
-					]
-					insert [
-						; switch in editor to COMMAND mode
-					;	win/menu: red-console-ctx/editor-menu
-						system/console/edit-mode: 'command
-						self/target/color: 128.128.128
-						probe "beg sel-car"
-						select-caret
-						probe "end sel-car"
-					]
-				]
+				; switch to editor (INSERT mode)
+				win/menu: red-console-ctx/editor-menu
+				exit-event-loop
+				system/console/edit-mode: 'insert
+				switch-buffer
 				paint
 			]
 			#"^M" [									;-- ENTER key
 				caret/visible?: no
-				either edit-mode? 'console [
-					exit-event-loop
-				] [
-					l: at-line
-					add-line copy ""
-					if pos < length? line [
-					;	unless first next l []
-						move/part skip line pos first next l (length? line) - pos
-					]
-					line: first next l
-					max-pos: pos: 0
+				exit-event-loop
+			]
+			#"^H" [if pos <> 0 [pos: pos - 1 remove skip line pos]]
+			left  [move-caret -1]
+			right [move-caret 1]
+			up	  []
+			down  []
+		][
+			insert skip line pos char
+			pos: pos + 1
+		]
+	]
+
+	insert-keys: func [event [event!] /local char][
+		char: probe event/key
+		switch/default char [
+			#"^[" [									;-- ESCAPE key
+				win: window-face? self/target
+				; switch in editor to COMMAND mode
+				system/console/edit-mode: 'command
+				self/target/color: 128.128.128
+				probe "beg sel-car"
+				select-caret
+				probe "end sel-car"
+				paint
+			]
+			#"^M" [									;-- ENTER key
+				caret/visible?: no
+				l: at-line
+				add-line copy ""
+				if pos < length? line [
+				;	unless first next l []
+					move/part skip line pos first next l (length? line) - pos
 				]
+				line: first next l
+				max-pos: pos: 0
 			]
 			#"^H" [									;-- BACKSPACE key
 				either zero? pos [
-					if all [
-						edit-mode? 'insert
-						1 < length? lines 
-					] [
+					if 	1 < length? lines [
 						l: at-line
 						line: first back l
 						pos: length? line
@@ -496,16 +498,11 @@ terminal!: object [
 				max-pos: pos
 			]
 			delete [
-				if edit-mode? 'insert [
-					either equal? pos length? line [
-						; line end
-						l: at-line
-						move/part first next l tail first l length? first next l
-						remove next l
-					] [
-						; normal operation
-						remove skip line pos
-					]
+				either equal? pos length? line [
+					; line end
+					l: at-line
+					move/part first next l tail first l length? first next l
+					remove next l
 				]
 			]
 			left  [
@@ -524,6 +521,33 @@ terminal!: object [
 				move-caret 0x1
 			]
 		][
+			insert skip line pos char
+			max-pos: pos: pos + 1
+		]
+
+	]
+
+	command-keys: func [event [event!] /local char][
+	if process-shortcuts event [exit]
+		char: probe event/key
+		switch/default char [
+			left  [
+				move-caret -1
+				select-caret
+			]
+			right [
+				move-caret 1
+				select-caret
+			]
+			up	  [
+				move-caret 0x-1
+				select-caret
+			]
+			down  [
+				move-caret 0x1
+				select-caret
+			]
+		][
 			either edit-mode? 'command [
 				do-key event/key
 			] [
@@ -531,8 +555,17 @@ terminal!: object [
 				max-pos: pos: pos + 1
 			]
 		]
+
+	]
+
+	press-key: func [event [event!]][
+		switch system/console/edit-mode [
+			console [console-keys event]
+			insert [insert-keys event]
+			command [command-keys event]
+		]
 		target/rate: 6
-		if caret/rate [caret/rate: none caret/color: 0.0.0.1]
+		if probe caret/rate [caret/rate: none caret/color: 0.0.0.1]
 		calc-top/edit
 		show target
 	]
