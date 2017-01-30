@@ -443,6 +443,13 @@ terminal!: object [
 				exit-event-loop
 				system/console/edit-mode: 'insert
 				switch-buffer
+				if empty? lines [
+					add-line make string! 200
+					calc-last-line
+					lines: head lines
+					paint
+					line: first lines
+				]
 				paint
 			]
 			#"^M" [									;-- ENTER key
@@ -468,9 +475,7 @@ terminal!: object [
 				; switch in editor to COMMAND mode
 				system/console/edit-mode: 'command
 				self/target/color: 128.128.128
-				probe "beg sel-car"
 				select-caret
-				probe "end sel-car"
 				paint
 			]
 			#"^M" [									;-- ENTER key
@@ -565,7 +570,7 @@ terminal!: object [
 			command [command-keys event]
 		]
 		target/rate: 6
-		if probe caret/rate [caret/rate: none caret/color: 0.0.0.1]
+		if caret/rate [caret/rate: none caret/color: 0.0.0.1]
 		calc-top/edit
 		show target
 	]
@@ -668,10 +673,8 @@ terminal!: object [
 		/local st
 	] [
 		; TODO: what to do on whitespace?
-		prober  "---LOCATE"
 		highlight/add-styles/types line st: copy [] theme
-		foreach [start length style] probe st [
-			prober ["locate:" posn "s/l" start length "e" start + length style mold at line posn]
+		foreach [start length style]  st [
 			if all [
 				posn >= start
 				posn < (start + length)
@@ -688,7 +691,6 @@ terminal!: object [
 		/before		"Select also whitespace before value"
 		/after		"Select also whitespace after value"
 	] [
-		prober ["SELVAL" posn]
 		if mark: locate-value pick lines posn/y posn/x [
 			case/all [
 				;  FIXME: cannot use both /begin and /end (makes little sense, but anyway)
@@ -718,7 +720,6 @@ terminal!: object [
 		direction
 		/local posit
 	] [
-		probe mold direction
 		switch direction [
 			right [
 				mark: back tail selects
@@ -730,25 +731,19 @@ terminal!: object [
 
 	find-selection: function [] [
 		; NOTE: expects only single-line strings
-		prober selects
 		l: pick lines selects/1
 		text: copy/part at l selects/2 selects/4 - selects/2
-		prober ["FIND:" mold text]
 		clear selects
 		forall lines [
 			if mark: find lines/1 text [
 				repend selects [index? lines index? mark index? lines (index? mark) + length? text]
-				prober ["found at" index? lines]
 			]
 		]
-		probe selects
-	;	paint
 	]
 
 	pick-selection: function [
 		; TODO: selection ID
 	] [
-;		probe "pick-sel"
 		copy/part at pick lines selects/1 selects/2 selects/2 + selects/4
 	]
 
@@ -756,7 +751,6 @@ terminal!: object [
 		; TODO: selection ID
 		text
 	] [
-;		probe "chng-sel"
 		change/part at pick lines selects/1 selects/2 text selects/2 + selects/4
 	]
 
