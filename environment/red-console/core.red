@@ -526,8 +526,7 @@ terminal!: object [
 				move-caret 0x1
 			]
 		][
-			insert skip line pos char
-			max-pos: pos: pos + 1
+			do-command reduce ['append char]
 		]
 
 	]
@@ -760,6 +759,12 @@ terminal!: object [
 		change-selection form reduce load pick-selection
 	]
 
+	; TODO: selection and movement should be done together
+	;		the easiest way is probably to select always on move
+	;		and then remove selection when none is wanted
+	;		I don’t think there’s situation where we need selection to stay
+	;		and move elsewhere, but this can be cached somehow IMO
+
 	do-command: function [
 		cmd
 	] [
@@ -799,6 +804,10 @@ terminal!: object [
 					move-caret select [left -1 right 1 up 0x-1 down 0x1] value
 					expand-selection value
 				)
+			|	'append set value [char! | string!] ( ; TODO: append code, integers, ...
+					insert skip line pos value
+					max-pos: pos: pos + 1
+			)
 			|	'debug (
 					prober ["===DEBUG===^/pos:" as-pair pos index? at-line]
 					val-pos: probe locate-value line pos
