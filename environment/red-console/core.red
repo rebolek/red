@@ -432,6 +432,8 @@ terminal!: object [
 		]
 	]
 
+; === custom keyboard handlers ===============================================
+
 	console-keys: func [event [event!] /local char][
 		if process-shortcuts event [exit]
 		char: event/key
@@ -479,15 +481,7 @@ terminal!: object [
 				paint
 			]
 			#"^M" [									;-- ENTER key
-				caret/visible?: no
-				l: at-line
-				add-line copy ""
-				if pos < length? line [
-				;	unless first next l []
-					move/part skip line pos first next l (length? line) - pos
-				]
-				line: first next l
-				max-pos: pos: 0
+				do-command [append newline]
 			]
 			#"^H" [									;-- BACKSPACE key
 				either zero? pos [
@@ -804,6 +798,17 @@ terminal!: object [
 					move-caret select [left -1 right 1 up 0x-1 down 0x1] value
 					expand-selection value
 				)
+			|	'append 'newline (
+					caret/visible?: no
+					l: at-line
+					add-line copy ""
+					if pos < length? line [
+					;	unless first next l []
+						move/part skip line pos first next l (length? line) - pos
+					]
+					line: first next l
+					max-pos: pos: 0
+			)
 			|	'append set value [char! | string!] ( ; TODO: append code, integers, ...
 					insert skip line pos value
 					max-pos: pos: pos + 1
