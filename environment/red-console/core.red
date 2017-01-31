@@ -469,8 +469,10 @@ terminal!: object [
 		]
 	]
 
-	insert-keys: func [event [event!] /local char][
+	insert-keys: func [event [event!] /local char cmd][
 		char: probe event/key
+		prober ["shift?" event/shift?]
+		cmd: either event/shift? ['select] ['move]
 		switch/default char [
 			#"^[" [									;-- ESCAPE key
 				win: window-face? self/target
@@ -497,28 +499,12 @@ terminal!: object [
 				max-pos: pos
 			]
 			delete [
-				either equal? pos length? line [
-					; line end
-					l: at-line
-					move/part first next l tail first l length? first next l
-					remove next l
-				]
+				do-command [delete under]
 			]
-			left  [
-				move-caret -1
-			;	if edit-mode? 'command [select-caret]
-			]
-			right [
-				move-caret 1
-			;	if edit-mode? 'command [select-caret]
-			]
-			up	  [
-				move-caret 0x-1
-			;	if edit-mode? 'command [select-caret]
-			]
-			down  [
-				move-caret 0x1
-			]
+			left  [do-command reduce [cmd 'left]]
+			right [do-command reduce [cmd 'right]]
+			up	  [do-command reduce [cmd 'up]]
+			down  [do-command reduce [cmd 'down]]
 		][
 			do-command reduce ['append char]
 		]
@@ -529,22 +515,11 @@ terminal!: object [
 	if process-shortcuts event [exit]
 		char: probe event/key
 		switch/default char [
-			left  [
-				move-caret -1
-				select-caret
-			]
-			right [
-				move-caret 1
-				select-caret
-			]
-			up	  [
-				move-caret 0x-1
-				select-caret
-			]
-			down  [
-				move-caret 0x1
-				select-caret
-			]
+			left	[do-command [move left select caret]]
+			right	[do-command [move right select caret]]
+			up		[do-command [move up select caret]]
+			down	[do-command [move down select caret]]
+			delete	[do-command [delete under]]
 		][
 			either edit-mode? 'command [
 				do-key event/key
@@ -698,26 +673,42 @@ terminal!: object [
 		]
 	]
 
-	select-caret: does [
+	select-caret: function [
+		/next "Select character next to caret"
+		/local p
+	] [
+		; TODO: boundaries checking
+		p: either next [pos + 1] [pos]
 		; line xpos
 		clear selects
 		unless zero? length? line [
 			repend selects [
-				index? at-line pos
-				index? at-line pos + 1
+				index? at-line p
+				index? at-line p + 1
 			]
 		]
 	]
 
-	expand-selection: func [
+	adjust-selection: func [
 		direction
-		/local posit
+		/local in-selection?
 	] [
-		switch direction [
-			right [
-				mark: back tail selects
-				mark/1: mark/1 + 1 ; TODO boundaries checking
-				pos: mark/1 - 1
+		; NOTE: works always on first selection. picking other must be done externaly
+		; TODO: boundaries checking
+		in-selection?: all [pos < (fourth selects) pos >= (second selects)]
+		case [
+			all [in-selection? direction = 'right] [
+				selects/2: selects/2 + 1 
+			]
+			all [in-selection? direction = 'left] [
+				selects/4: selects/4 - 1
+			]
+			direction = 'right [
+				selects/4: selects/4 + 1
+				pos: selects/4 - 1
+			]
+			direction = 'left [
+				selects/2: pos + 1
 			]
 		]
 	]
@@ -778,25 +769,23 @@ terminal!: object [
 					system/console/edit-mode: 'insert
 					self/target/color: white
 				)
-			|	'left	(
-					move-caret -1
-					select-caret
-				)
-			|	'right	(
-					move-caret 1
-					select-caret
-				)
-			|	'up		(
-					move-caret 0x-1
-					select-caret
-				)
-			|	'down	(
-					move-caret 0x1
-					select-caret
-				)
-			|	'select set value ['left | 'right | 'up | 'down] (
+			|	opt 'move set value ['left | 'right | 'up | 'down] (
+					clear selects
 					move-caret select [left -1 right 1 up 0x-1 down 0x1] value
-					expand-selection value
+			;		select-caret
+			)
+			|	'select set value ['left | 'right | 'up | 'down | 'caret] (
+					switch/default value [
+						caret [select-caret]
+					] [
+						move-caret select [left -1 right 1 up 0x-1 down 0x1] value
+						prober ["select" pos mold selects]
+						case [
+							all [equal? 'left value empty? selects] [select-caret/next]
+							empty? selects [select-caret]
+							true [adjust-selection value]
+						]
+					]
 				)
 			|	'append 'newline (
 					caret/visible?: no
@@ -813,6 +802,16 @@ terminal!: object [
 					insert skip line pos value
 					max-pos: pos: pos + 1
 			)
+			|	'delete set value ['before | 'under] (
+					either equal? pos length? line [
+						; line end
+						l: at-line
+						move/part first next l tail first l length? first next l
+						remove next l
+					] [
+						remove at line pos + 1
+					]
+				)
 			|	'debug (
 					prober ["===DEBUG===^/pos:" as-pair pos index? at-line]
 					val-pos: probe locate-value line pos
