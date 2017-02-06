@@ -318,6 +318,29 @@ terminal!: object [
 		]
 	]
 
+	move-caret-pos: func [
+		; NOTE: temporary function to move caret at desired position
+		;		should be done by MOVE-CARET ideally
+		place
+		/local value
+	] [
+		value: locate-value line pos
+		case [
+			place = 'value-end [
+				unless value [value: locate-value line pos + 1]
+				either equal? value/2 pos + 1 [
+					pos: pos + 1
+					move-caret-pos place
+				] [
+					pos: probe second value
+				]
+			]
+			place = 'value-start [
+
+			]
+		]
+	]
+
 	scroll-lines: func [delta /local n len cnt end offset][
 		end: scroller/max-size - page-cnt + 1
 		offset: scroller/position
@@ -636,7 +659,7 @@ terminal!: object [
 	]
 
 	locate-value: func [
-		text
+		text ; line
 		posn
 		/local st
 	] [
@@ -697,6 +720,14 @@ terminal!: object [
 		; TODO: boundaries checking
 		in-selection?: all [pos < (fourth selects) pos >= (second selects)]
 		case [
+			direction = 'caret [
+				; TODO: caret can be inside selection, in that case do nothing
+				either pos > selects/4 [
+					selects/4: pos
+				] [
+					selects/2: pos
+				]
+			]
 			all [in-selection? direction = 'right] [
 				selects/2: selects/2 + 1 
 			]
@@ -774,6 +805,9 @@ terminal!: object [
 					move-caret select [left -1 right 1 up 0x-1 down 0x1] value
 			;		select-caret
 			)
+			|	'select 'value 'to set value ['start | 'end] (
+				; TODO: move 'value-start/end here
+			)
 			|	'select set value ['left | 'right | 'up | 'down | 'caret] (
 					switch/default value [
 						caret [select-caret]
@@ -818,18 +852,11 @@ terminal!: object [
 					prober ["value:" mold copy/part at line first val-pos (second val-pos) - first val-pos]
 				)
 			|	'value-end (
-					if value: select-value/end as-pair pos index? at-line [
-						case [
-							; at the end of word, select next one
-							equal? pos + 1 fourth value (
-								; FIXME + 3 is offset + whitespace + first char of next word
-								; 		there can be more whitespaces, or it’s last word
-								value: select-value/before as-pair pos + 3 index? at-line
-							)
-						]
-						pos: -1 + fourth value
-					]
-				)
+				either locate-value line pos + 1 [select-caret] [select-caret/next]
+				move-caret-pos 'value-end
+				adjust-selection 'caret
+				pos: pos - 1
+			)
 			|	'value-start (
 					if value: select-value/start as-pair pos + 1 index? at-line [
 						case [

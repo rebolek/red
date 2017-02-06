@@ -15,6 +15,7 @@ Red [
 #include %input.red
 #include %help.red
 #include %engine.red
+#include %../../system/library/call/call.red
 
 #if config/OS = 'Windows [
 	system/console/init-console "Red Console"
