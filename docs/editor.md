@@ -22,11 +22,11 @@ This branch cannot be compiled under Windows currently because it merged `MacOSX
 ```
 do %environment/red-console/red-console.red
 ```
-* press `Escape` to ender editor.
+* press `Escape` to enter editor.
 
 ## Usage
 
-There are two editor modes: `insert` and `command`. Editor starts in `insert` mode. To ender command mode, press `Escape`. To go back to editor mode from command mode, press `a` for append or `i` for insert (see below).
+There are two editor modes: `insert` and `command`. Editor starts in `insert` mode. To enter command mode, press `Escape`. To go back to editor mode from command mode, press `a` for append or `i` for insert (see below).
 
 ### Keyboard bindings
 
