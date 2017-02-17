@@ -51,3 +51,22 @@ There are two editor modes: `insert` and `command`. Editor starts in `insert` mo
 * `r` - reduce and replace selection
 * `s` - pastes source of one function into buffer (*debug*)
 * `d` - print debug information into (*debug*)
+
+## Dialect
+
+Editor is powered by a dialect. Every keypress generates a command that is parsed by the editor and executed. These commands can be easily recorded for undo/redo puroposes or scripting. It also makes things like remote editing and collaborative editing simple.
+
+### Dialect description
+
+* `'quit-editor` - switch back to console
+* `'enter-editor` - switch to insert mode
+* `opt 'move ['left | 'right | 'up | 'down]` - caret movement
+* `'select ['left | 'right | 'up | 'down]` - shrink/expand selection
+* `'select 'value 'to ['start | 'end]` - expand selection to value start/end
+* `'append [char! | string! | 'newline]` - append value after cursor position
+* `'delete set value ['before | 'under]` - delete value at desired position
+* `'debug` - print debg info into console
+* `'cut-selection` - cut selection from buffer
+* `'reduce-selection` - replace selection with its reduced value
+* `'find-selection` - find selected string and mark all occurences
+* `'paste-source` - past source code (*debug*)
