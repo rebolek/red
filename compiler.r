@@ -1268,6 +1268,10 @@ red: context [
 	]
 	
 	fetch-functions: func [pos [block!] /local name type spec refs arity nat? proto entry][
+		if any [tail? pos not any-word? pos/1][
+			pc: back pc
+			throw-error "Non-compilable function definition"
+		]
 		name: to word! pos/1
 		if find functions name [exit]					;-- mainly intended for 'make (hardcoded)
 
@@ -1684,8 +1688,8 @@ red: context [
 	]
 	
 	inherit-functions: func [							 ;-- multiple inheritance case
-		new [object!] extend [object!] multi? [logic!]
-		/local symbol name
+		new [object!] extend [object!]
+		/local symbol name entry
 	][
 		foreach word next first extend [
 			if function! = get in extend word [
@@ -1695,9 +1699,9 @@ red: context [
 					name: decorate-obj-member word select objects new
 					select functions symbol
 				]
-				either multi? [							;-- not allowed for libRedRT client programs
+				either entry: find bodies symbol [		;-- not allowed for libRedRT client programs
 					append bodies name
-					append bodies bind/copy copy/part next find bodies symbol 8 new
+					append bodies bind/copy copy/part next entry 8 new
 				][
 					redirect-to literals [
 						emit compose [#define (decorate-func name) (decorate-func symbol)]
@@ -1715,7 +1719,7 @@ red: context [
 		/locals
 			words ctx spec name id func? obj original body pos entry symbol
 			body? ctx2 new blk list path on-set-info values w defer mark blk-idx
-			event pos2 loc-s loc-d shadow-path saved-pc saved set? multi-inherit?
+			event pos2 loc-s loc-d shadow-path saved-pc saved set?
 	][
 		saved-pc: pc
 		either set-path? original: pc/-1 [
@@ -1873,15 +1877,14 @@ red: context [
 			]
 			insert-lf -3
 		]
-		multi-inherit?: not all [job/dev-mode? not job/libRedRT?]
 		
 		if proto [
-			if body? [inherit-functions obj last proto multi-inherit?]
+			if body? [inherit-functions obj last proto]
 			emit reduce ['object/duplicate select objects last proto ctx]
 			insert-lf -3
 		]
 		if all [not body? not passive][
-			inherit-functions obj new multi-inherit?
+			inherit-functions obj new
 			emit reduce ['object/transfer ctx2 ctx]
 			insert-lf -3
 		]
@@ -2184,7 +2187,13 @@ red: context [
 	]
 	
 	comp-repeat: has [name word cnt set-cnt lim set-lim action][
-		add-symbol word: pc/1
+		unless any-word? word: pc/1 [
+			pc: back pc
+			throw-error "REPEAT expects a word as first argument"
+		]
+		emit-open-frame 'body
+		
+		add-symbol word
 		add-global word
 		name: decorate-symbol word
 		action: either local-word? word [
@@ -2239,6 +2248,7 @@ red: context [
 		pop-call
 		insert last output reduce [action name cnt]
 		new-line last output on
+		emit-close-frame
 		emit-close-frame
 		depth: depth - 1
 	]
@@ -2453,7 +2463,7 @@ red: context [
 		insert last output init
 	]
 	
-	collect-words: func [spec [block!] body [block!] /local pos loc end ignore words word rule][
+	collect-words: func [spec [block!] body [block!] /local pos loc end ignore words word rule counter][
 		if pos: find spec /extern [
 			either end: any [
 				find next pos refinement!
@@ -2476,7 +2486,7 @@ red: context [
 			while [not tail? pos][
 				either all [
 					find [word! lit-word! get-word!] type?/word pos/1
-					any [
+					any [ 
 						find/part spec to lit-word! pos/1 loc
 						find/part spec to get-word! pos/1 loc
 					]
@@ -2501,7 +2511,7 @@ red: context [
 			unless any [
 				all [ignore	find ignore word]
 				find words word
-			][
+			][			
 				append words word
 			]
 		]
@@ -2514,11 +2524,12 @@ red: context [
 				| pos: word! (
 					if all [
 						find word-iterators pos/1
-						pos/2
+						counter: pos/2
 					][
 						foreach word any [
-							all [block? pos/2 pos/2]
-							reduce [pos/2]
+							all [block? counter counter]
+							all [any-word? counter reduce [counter]]
+							[]
 						] make-local
 					]
 				)
@@ -2747,8 +2758,14 @@ red: context [
 		clear mark
 		
 		body: pc/1
-		unless block? body [
-			throw-error "SWITCH expects a block as second argument"
+		if any [not block? body empty? body][
+			append output arg
+			comp-expression								;-- compile cases argument
+			if default? [comp-expression]				;-- optionally compile /default argument
+			emit-native/with 'switch reduce [pick [2 -1] to logic! default?]
+			emit-close-frame
+			pop-call
+			exit
 		]
 		list: make block! 4
 		cnt: 1
@@ -2783,7 +2800,7 @@ red: context [
 				cnt: cnt + 1
 			) skip]
 		]
-		unless empty? body [pc: next pc]
+		pc: next pc
 		
 		append list 'default							;-- process default case
 		either default? [
@@ -3115,7 +3132,7 @@ red: context [
 					either (emit-deep-check path fpath) (true-blk)
 				]
 			]
-			if all [set? obj/5][						;-- detect on-set callback 
+			if all [set? obj/5 obj/5/1 <> -1][			;-- detect on-set callback 
 				insert clear last output compose [
 					stack/keep							;-- save new value
 					word/replace (ctx) (get-word-index/with last path ctx)	;-- push old, set new
@@ -3249,7 +3266,13 @@ red: context [
 				emit-open-frame name
 			]
 			current-call: call							;-- for error reporting
+			pos: pc
 			comp-arguments spec/3 spec/2				;-- fetch arguments
+			
+			if all [path? call none? spec/4][
+				pc: back pos
+				throw-error [call/1 "has no refinement"]
+			]
 			
 			either compact? [
 				refs: either spec/4 [
@@ -3677,6 +3700,7 @@ red: context [
 					][-3]
 					cnt: cnt + 1
 				)
+				| refinement! (cnt: cnt + 1)
 				| skip
 			]
 		]
@@ -3713,6 +3737,7 @@ red: context [
 						pos/1: 'type-check-opt
 						pos/2: pick spec select refs to refinement! next form pos/2
 						remove at pos 8
+						new-line pos yes
 					) 2 skip
 					| skip
 				]
@@ -3726,6 +3751,9 @@ red: context [
 	][
 		switch/default type?/word spec [
 			path! [
+				unless parse spec [some word!][
+					throw-error ["invalid #get argument:" spec]
+				]
 				set [obj fpath] object-access? spec
 				ctx: second obj: find objects obj
 				unless idx: get-word-index/with last spec ctx [return none]

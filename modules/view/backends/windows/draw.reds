@@ -218,6 +218,7 @@ draw-begin: func [
 	ctx/pen-width:		as float32! 1.0
 	ctx/pen?:			yes
 	ctx/hwnd:			hWnd
+	ctx/font-color:		-1
 	dc:					null
 
 	D2D?: (get-face-flags hWnd) and FACET_FLAGS_D2D <> 0
@@ -1136,10 +1137,13 @@ OS-draw-box: func [
 		radius	[red-integer!]
 		rad		[integer!]
 ][
-	either TYPE_OF(lower) = TYPE_INTEGER [
+	rad: either TYPE_OF(lower) = TYPE_INTEGER [
 		radius: as red-integer! lower
-		lower:  lower - 1
-		rad: radius/value * 2
+		lower: lower - 1
+		radius/value
+	][0]
+	either positive? rad [
+		rad: rad * 2
 		either GDI+? [
 			gdiplus-draw-roundbox
 				ctx
@@ -1427,6 +1431,7 @@ OS-draw-text: func [
 	catch?	[logic!]
 	/local
 		str		[c-string!]
+		p		[c-string!]
 		len		[integer!]
 		h		[integer!]
 		w		[integer!]
@@ -1434,14 +1439,10 @@ OS-draw-text: func [
 		y		[integer!]
 		x		[integer!]
 		rect	[RECT_STRUCT_FLOAT32]
+		tm		[tagTEXTMETRIC]
 ][
-	if D2D? [
-		OS-draw-text-d2d ctx pos text catch?
-		exit
-	]
-
-	str: unicode/to-utf16 text
-	len: string/rs-length? text
+	len: -1
+	str: unicode/to-utf16-len text :len no
 	either ctx/on-image? [
 		x: 0
 		rect: as RECT_STRUCT_FLOAT32 :x
@@ -1451,7 +1452,20 @@ OS-draw-text: func [
 		rect/height: as float32! 0
 		GdipDrawString ctx/graphics str len ctx/gp-font rect 0 ctx/gp-font-brush
 	][
-		ExtTextOut ctx/dc pos/x pos/y ETO_CLIPPED null str len null
+		tm: as tagTEXTMETRIC colors
+		GetTextMetrics ctx/dc tm
+		y: pos/y
+		p: str
+		while [len > 0][
+			if all [p/1 = #"^/" p/2 = #"^@"][
+				ExtTextOut ctx/dc pos/x y ETO_CLIPPED null str (as-integer p - str) / 2 null
+				y: y + tm/tmHeight
+				str: p + 2
+			]
+			p: p + 2
+			len: len - 1
+		]
+		if p > str [ExtTextOut ctx/dc pos/x y ETO_CLIPPED null str (as-integer p - str) / 2 null]
 	]
 ]
 

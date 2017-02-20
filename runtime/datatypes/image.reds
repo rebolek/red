@@ -366,6 +366,8 @@ image: context [
 			rgb		[byte-ptr!]
 			alpha	[byte-ptr!]
 			color	[red-tuple!]
+			x		[integer!]
+			y		[integer!]
 	][
 		#if debug? = yes [if verbose > 0 [print-line "image/make"]]
 
@@ -413,8 +415,12 @@ image: context [
 			default [return to proto spec type]
 		]
 
-		img/size: pair/y << 16 or pair/x
-		img/node: as node! OS-image/make-image pair/x pair/y rgb alpha color
+		x: pair/x
+		if negative? x [x: 0]
+		y: pair/y
+		if negative? y [y: 0]
+		img/size: y << 16 or x
+		img/node: as node! OS-image/make-image x y rgb alpha color
 		img
 	]
 

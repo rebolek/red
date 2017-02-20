@@ -202,8 +202,10 @@ get-event-key: func [
 					VK_RCONTROL	[_right-control]
 					VK_CAPITAL	[_caps-lock]
 					VK_NUMLOCK	[_num-lock]
-					VK_LMENU	[_left-menu]
-					VK_RMENU	[_right-menu]
+					VK_LMENU	[_left-alt]
+					VK_RMENU	[_right-alt]
+					VK_LWIN		[_left-command]
+					VK_RWIN		[_right-command]
 					default		[
 						either evt/type = EVT_KEY [none-value][
 							char: as red-char! stack/push*
@@ -307,6 +309,7 @@ get-event-flags: func [
 	if evt/flags and EVT_FLAG_AUX_DOWN	 <> 0 [block/rs-append blk as red-value! _aux-down]
 	if evt/flags and EVT_FLAG_CTRL_DOWN	 <> 0 [block/rs-append blk as red-value! _control]
 	if evt/flags and EVT_FLAG_SHIFT_DOWN <> 0 [block/rs-append blk as red-value! _shift]
+	if evt/flags and EVT_FLAG_MENU_DOWN  <> 0 [block/rs-append blk as red-value! _alt]
 	as red-value! blk
 ]
 
@@ -366,6 +369,7 @@ check-extra-keys: func [
 	key: 0
 	if (GetAsyncKeyState VK_CONTROL)  and 8000h <> 0 [key: EVT_FLAG_CTRL_DOWN]
 	if (GetAsyncKeyState VK_SHIFT)    and 8000h <> 0 [key: key or EVT_FLAG_SHIFT_DOWN]
+	if (GetAsyncKeyState VK_MENU)     and 8000h <> 0 [key: key or EVT_FLAG_MENU_DOWN]	;-- ALT key
 	
 	unless only? [
 		if (GetAsyncKeyState 01h) and 8000h <> 0 [key: key or EVT_FLAG_DOWN] 	   ;-- VK_LBUTTON
@@ -595,7 +599,10 @@ process-command-event: func [
 					current-msg/hWnd: child	  				;-- force Edit handle
 					make-event current-msg -1 EVT_CHANGE
 					type: as red-word! get-facet current-msg FACE_OBJ_TYPE
-					if type/symbol = area [update-scrollbars child]
+					if type/symbol = area [
+						extend-area-limit child 16
+						update-scrollbars child
+					]
 				]
 			]
 			0

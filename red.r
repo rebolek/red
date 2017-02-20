@@ -641,7 +641,7 @@ redc: context [
 				if load-lib? [build-compress-lib]
 				run-console gui?
 			][
-				fail "No source files specified."
+				return reduce [none none]
 			]
 		]
 

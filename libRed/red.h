@@ -1,16 +1,13 @@
 #ifndef LIB_RED_H
 #define LIB_RED_H
 
-#include <stdarg.h>
-#include <stddef.h>
-
 /* The Red semantic version number components */
-#define RED_VERSION_MAJOR 0
-#define RED_VERSION_MINOR 6
-#define RED_VERSION_PATCH 2
+#define RED_VERSION_MAJOR 1
+#define RED_VERSION_MINOR 0
+#define RED_VERSION_PATCH 0
 
 /* A human-friendly string representation of the version */
-#define RED_VERSION_STRING "0.6.2"
+#define RED_VERSION_STRING "1.0.0"
 
 /*
 ** A monotonically increasing numeric representation of the version number. Use
@@ -20,13 +17,22 @@
                              RED_VERSION_MINOR * 1000 + \
                              RED_VERSION_PATCH)
 
+/* Forces the use of Visual Styles if compiling with VisualStudio */
+#ifdef _MSC_VER
+	#pragma comment(linker,"\"/manifestdependency:type='win32' \
+	name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
+	processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#endif
+
 typedef void*     red_value;
 typedef red_value red_unset;
+typedef red_value red_datatype;
 typedef red_value red_none;
 typedef red_value red_logic;
 typedef red_value red_integer;
 typedef red_value red_float;
 typedef red_value red_pair;
+typedef red_value red_tuple;
 typedef red_value red_string;
 typedef red_value red_word;
 typedef red_value red_block;
@@ -40,6 +46,7 @@ void		redClose(void);
 
 /* Run Red code */
 red_value	redDo(const char* source);
+red_value	redDoFile(const char* file);
 red_value	redDoBlock(red_block code);
 red_value	redCall(red_word name, ...);
 
@@ -51,9 +58,12 @@ long		redSymbol(const char* word);
 red_unset	redUnset(void);
 red_none	redNone(void);
 red_logic	redLogic(long logic);
+red_datatype redDatatype(long type);
 red_integer	redInteger(long number);
 red_float	redFloat(double number);
 red_pair	redPair(long x, long y);
+red_tuple	redTuple(long r, long g, long b);
+red_tuple	redTuple4(long r, long g, long b, long a);
 red_string	redString(const char* string);
 red_word	redWord(const char* word);
 red_block	redBlock(red_value v,...);
@@ -100,6 +110,8 @@ red_value	redHasError(void);
 const char*	redFormError(void);
 int			redOpenLogWindow(void);
 int			redCloseLogWindow(void);
+void		redOpenLogFile(const char *name);
+void		redCloseLogFile(void);
 
 /* Red Types */
 typedef enum

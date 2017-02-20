@@ -66,6 +66,7 @@ Public Declare Sub redOpenReal Lib "libRed.dll" Alias "redOpen" ()
 
 '--- Run Red code ---
 Public Declare Function redDo Lib "libRed.dll" (ByRef source As Variant) As Long
+Public Declare Function redDoFile Lib "libRed.dll" (ByRef file As Variant) As Long
 Public Declare Function redDoBlock Lib "libRed.dll" (ByVal code As Long) As Long
 
 '--- Expose a VB callback in Red ---
@@ -76,9 +77,12 @@ Public Declare Function redSymbol Lib "libRed.dll" (ByRef word As Variant) As Lo
 Public Declare Function redUnset Lib "libRed.dll" () As Long
 Public Declare Function redNone Lib "libRed.dll" () As Long
 Public Declare Function redLogicReal Lib "libRed.dll" Alias "redLogic" (ByVal bool As Long) As Long
+Public Declare Function redDatatype Lib "libRed.dll" (ByVal dtype As Long) As Long
 Public Declare Function redInteger Lib "libRed.dll" (ByVal number As Long) As Long
 Public Declare Function redFloat Lib "libRed.dll" (ByVal number As Double) As Long
 Public Declare Function redPair Lib "libRed.dll" (ByVal x As Long, ByVal y As Long) As Long
+Public Declare Function redTuple Lib "libRed.dll" (ByVal r As Long, ByVal g As Long, ByVal b As Long) As Long
+Public Declare Function redTuple4 Lib "libRed.dll" (ByVal r As Long, ByVal g As Long, ByVal b As Long, ByVal a As Long) As Long
 Public Declare Function redString Lib "libRed.dll" (ByRef str As Variant) As Long
 Public Declare Function redWord Lib "libRed.dll" (ByRef word As Variant) As Long
 Public Declare Function redMakeSeries Lib "libRed.dll" (ByVal t As Long, ByVal size As Long) As Long
@@ -116,8 +120,6 @@ Public Declare Function redGetPath Lib "libRed.dll" (ByVal path As Long) As Long
 
 '--- libRed settings ---
 Public Declare Sub redSetEncoding Lib "libRed.dll" (ByVal encIn As Long, ByVal encOut As Long)
-Public Declare Sub redOpenLogFile Lib "libRed.dll" (ByVal name As String)
-Public Declare Sub redCloseLogFile Lib "libRed.dll" ()
 
 '--- Debugging purpose ---
 Public Declare Function redPrint Lib "libRed.dll" (ByVal value As Long)
@@ -125,6 +127,9 @@ Public Declare Function redProbe Lib "libRed.dll" (ByVal value As Long) As Long
 Public Declare Function redHasError Lib "libRed.dll" () As Long
 Public Declare Function redOpenLogWindow Lib "libRed.dll" () As Long
 Public Declare Function redCloseLogWindow Lib "libRed.dll" () As Long
+Public Declare Sub redOpenLogFile Lib "libRed.dll" (ByVal name As String)
+Public Declare Sub redCloseLogFile Lib "libRed.dll" ()
+
 
 '--- libRed VB-specific wrappers ---
 
@@ -143,7 +148,7 @@ Public Function redCString(str As Long)
     redCString = var
 End Function
 
-Sub redClose()
+Public Sub redClose()
     'Do nothing for now
 End Sub
 
@@ -151,7 +156,7 @@ Public Function redLogic(bool As Boolean) As Long
     redLogic = redLogicReal(IIf(bool, 1, 0))
 End Function
 
-Sub redAppendBlockValue(blk As Long, value As Variant, asWord As Boolean)
+Private Sub redAppendBlockValue(blk As Long, value As Variant, asWord As Boolean)
     Select Case VarType(value)
         Case vbInteger, vbLong: redAppend redGet(blk), redInteger(CLng(value))
         Case vbSingle, vbDouble: redAppend redGet(blk), redFloat(CDbl(value))
@@ -160,33 +165,68 @@ Sub redAppendBlockValue(blk As Long, value As Variant, asWord As Boolean)
     End Select
 End Sub
 
-Function redBlock(ParamArray args() As Variant) As Long
+Public Function redBlock(ParamArray args() As Variant) As Long
     Dim i As Long
     Dim blk As Long
     
     blk = blkWord
     redSet blk, redMakeSeries(red_block, UBound(args) - LBound(args) + 1)
-    For i = LBound(args) To UBound(args): redAppendBlockValue blk, args(i), False: Next i
+    For i = LBound(args) To UBound(args): redAppend redGet(blk), args(i): Next i
     redBlock = redGet(blk)
 End Function
 
-Function redPath(ParamArray args() As Variant) As Long
+Public Function redPath(ParamArray args() As Variant) As Long
     Dim i As Long
     Dim blk As Long
     
     blk = blkWord
     redSet blk, redMakeSeries(red_path, UBound(args) - LBound(args) + 1)
-    For i = LBound(args) To UBound(args): redAppendBlockValue blk, args(i), True: Next i
+    For i = LBound(args) To UBound(args): redAppend redGet(blk), args(i), True: Next i
     redPath = redGet(blk)
 End Function
 
-Function redCall(ParamArray args() As Variant) As Long
+Public Function redCall(ParamArray args() As Variant) As Long
     Dim i As Long
     Dim blk As Long
     
     blk = callBlkWord
     redClear redGet(blk)
     redAppend redGet(blk), args(0)
-    For i = LBound(args) + 1 To UBound(args): redAppendBlockValue blk, args(i), False: Next i
+    For i = LBound(args) + 1 To UBound(args): redAppend redGet(blk), args(i), False: Next i
     redCall = redDoBlock(redGet(blk))
+End Function
+
+Public Function redBlockVB(ParamArray args() As Variant) As Long
+    Dim i As Long
+    Dim blk As Long
+    
+    blk = blkWord
+    redSet blk, redMakeSeries(red_block, UBound(args) - LBound(args) + 1)
+    For i = LBound(args) To UBound(args): redAppendBlockValue blk, args(i), False: Next i
+    redBlockVB = redGet(blk)
+End Function
+
+Public Function redPathVB(ParamArray args() As Variant) As Long
+    Dim i As Long
+    Dim blk As Long
+    
+    blk = blkWord
+    redSet blk, redMakeSeries(red_path, UBound(args) - LBound(args) + 1)
+    For i = LBound(args) To UBound(args): redAppendBlockValue blk, args(i), True: Next i
+    redPathVB = redGet(blk)
+End Function
+
+Public Function redCallVB(ParamArray args() As Variant) As Long
+    Dim i As Long
+    Dim blk As Long
+    
+    If VarType(args(0)) <> vbString Then
+        MsgBox "Error in redCallVB(), first argument must be a string"
+        redCallVB = redUnset
+    End If
+    blk = callBlkWord
+    redClear redGet(blk)
+    redAppend redGet(blk), redWord(CVar(args(0)))
+    For i = LBound(args) + 1 To UBound(args): redAppendBlockValue blk, args(i), False: Next i
+    redCallVB = redDoBlock(redGet(blk))
 End Function

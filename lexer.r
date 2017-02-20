@@ -39,19 +39,20 @@ lexer: context [
 	
 	;====== Parsing rules ======
 
-	four:  charset "01234"
-	half:  charset "012345"
-    non-zero: charset "123456789"
-    digit: union non-zero charset "0"
-    dot: #"."
-    comma: #","
+	four:	  charset "01234"
+	half:	  charset "012345"
+	non-zero: charset "123456789"
+	digit:	  union non-zero charset "0"
+	dot:	  #"."
+	comma:	  #","
 
 	byte: [
 		"25" half
-		| "2" four digit
-		| "1" digit digit
-		| non-zero digit
-		| digit
+		| #"2" four digit
+		| #"1" digit digit
+		| opt #"0" non-zero digit
+		| 0 2 #"0" digit
+		| #"0"
 	]
 
 	hexa:  union digit charset "ABCDEF"
@@ -272,11 +273,11 @@ lexer: context [
 		] (type: time!)
 	]
 	
-	positive-integer-rule: [(type: integer!) digit any digit e:]
+	positive-integer-rule: [digit any digit e: (type: integer!)]
 	
 	integer-number-rule: [
-		(type: integer!)
 		opt [#"-" (neg?: yes) | #"+" (neg?: no)] digit any [digit | #"'" digit] e:
+		(type: integer!)
 	]
 	
 	integer-rule: [

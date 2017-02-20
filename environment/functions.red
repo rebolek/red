@@ -85,12 +85,12 @@ last:	func ["Returns the last value in a series"  s [series!]][pick back tail s 
 #do keep [
 	list: make block! 50
 	to-list: [
-		bitset! binary! block! char! email! error! file! float! get-path!
+		bitset! binary! block! char! email! file! float! get-path!
 		get-word! hash! integer! issue! lit-path! lit-word! logic! map! native! none!
 		pair! paren! path! percent! refinement! set-path! set-word! string! tag! time! typeset!
 		tuple! unset! url! word! image!
 	]
-	test-list: union to-list [action! datatype! function! image! object! op! routine! vector!]
+	test-list: union to-list [error! action! datatype! function! image! object! op! routine! vector!]
 	
 	;-- Generates all accessor functions (spec-of, body-of, words-of,...)
 	
@@ -779,9 +779,13 @@ split-path: func [
 	reduce [dir pos]
 ]
 
-do-file: func [file [file!] /local saved code new-path][
+do-file: func [file [file!] /local saved code new-path src][
 	saved: system/options/path
-	code: expand-directives load/all file
+	unless src: find/case read file "Red" [
+		cause-error 'syntax 'no-header reduce [file]
+	]
+	code: expand-directives load/all src
+	if code/1 = 'Red/System [cause-error 'internal 'red-system []]
 	new-path: first split-path clean-path file
 	change-dir new-path
 	set/any 'code do code
@@ -849,6 +853,30 @@ atan: func [
 	]
 ]
 
+atan2: func [
+	"Returns the angle of the point y/x in radians"
+	y		[number!]
+	x		[number!]
+	return:	[float!]
+][
+	#system [
+		stack/arguments: stack/arguments - 2
+		natives/arctangent2* no 1
+	]
+]
+
+
+sqrt: func [
+	"Returns the square root of a number"
+	number	[number!] "Angle in radians"
+	return:	[float!]
+][
+	#system [
+		stack/arguments: stack/arguments - 1
+		natives/square-root* no
+	]
+]
+
 ;--- Temporary definition, use at your own risks! ---
 rejoin: function [
 	"Reduces and joins a block of values."
@@ -865,7 +893,5 @@ rejoin: function [
 ;------------------------------------------
 
 keys-of:	:words-of
-atan2:		:arctangent2
-sqrt:		:square-root
 object:		:context
 halt:		:quit										;-- default behavior unless console is loaded

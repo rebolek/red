@@ -184,6 +184,7 @@ system/view/platform: context [
 				EVT_FLAG_DBL_CLICK:		10000000h
 				EVT_FLAG_CTRL_DOWN:		20000000h
 				EVT_FLAG_SHIFT_DOWN:	40000000h
+				EVT_FLAG_MENU_DOWN:		80000000h		;-- ALT key
 				;EVT_FLAG_KEY_SPECIAL:	80000000h		;@@ deprecated
 			]
 
@@ -304,6 +305,7 @@ system/view/platform: context [
 			_data:			word/load "data"
 			_control:		word/load "control"
 			_shift:			word/load "shift"
+			_alt:			word/load "alt"
 			_away:			word/load "away"
 			_down:			word/load "down"
 			_up:			word/load "up"
@@ -372,6 +374,8 @@ system/view/platform: context [
 			_right-control:	word/load "right-control"
 			_left-alt:		word/load "left-alt"
 			_right-alt:		word/load "right-alt"
+			_left-command:	word/load "left-command"
+			_right-command:	word/load "right-command"
 			_left-command:	word/load "left-command"
 			_right-command:	word/load "right-command"
 			_caps-lock:		word/load "caps-lock"

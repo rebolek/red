@@ -221,12 +221,14 @@ Red/System [
 #define BS_GROUPBOX			00000007h
 #define BS_AUTORADIOBUTTON	00000009h
 
-#define ES_LEFT             00000000h
-#define ES_CENTER           00000001h
-#define ES_RIGHT            00000003h
-#define ES_MULTILINE        00000004h
-#define ES_AUTOVSCROLL      00000040h
-#define ES_AUTOHSCROLL      00000080h
+#define EM_SETLIMITTEXT		000000C5h
+#define EM_GETLIMITTEXT		000000D5h
+#define ES_LEFT				00000000h
+#define ES_CENTER			00000001h
+#define ES_RIGHT			00000003h
+#define ES_MULTILINE		00000004h
+#define ES_AUTOVSCROLL		00000040h
+#define ES_AUTOHSCROLL		00000080h
 #define SS_LEFT				00000010h
 #define SS_SIMPLE			00000000h
 #define SS_NOTIFY			00000100h
@@ -1179,6 +1181,11 @@ XFORM!: alias struct! [
 		RegisterClassEx: "RegisterClassExW" [
 			lpwcx		[WNDCLASSEX]
 			return: 	[integer!]
+		]
+		UnregisterClass: "UnregisterClassW" [
+			lpClassName	[c-string!]
+			hInstance	[handle!]
+			return:		[integer!]
 		]
 		LoadCursor: "LoadCursorW" [
 			hInstance	 [handle!]

@@ -478,8 +478,9 @@ system/lexer: context [
 			"25" half
 			| "2" four digit
 			| "1" digit digit
-			| non-zero digit
-			| digit
+			| opt #"0" non-zero digit
+			| 0 2 #"0" digit
+			| #"0"
 		]
 
 		;-- Whitespaces list from: http://en.wikipedia.org/wiki/Whitespace_character
@@ -758,10 +759,11 @@ system/lexer: context [
 			] (type: time!)
 		]
 		
-		positive-integer-rule: [(type: integer!) digit any digit e:]
+		positive-integer-rule: [digit any digit e: (type: integer!)]
 
 		integer-number-rule: [
-			opt [#"-" (neg?: yes) | #"+" (neg?: no)] digit any [digit | #"'" digit] e: (type: integer!)
+			opt [#"-" (neg?: yes) | #"+" (neg?: no)] digit any [digit | #"'" digit] e:
+			(type: integer!)
 		]
 
 		integer-rule: [

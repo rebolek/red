@@ -730,6 +730,12 @@ DX-init: func [
 	dwrite-str-cache: as-c-string s/offset
 ]
 
+DX-cleanup: func [/local unk [IUnknown]][
+	COM_SAFE_RELEASE(unk dwrite-factory)
+	COM_SAFE_RELEASE(unk d2d-factory)
+	free as byte-ptr! dw-locale-name
+]
+
 to-dx-color: func [
 	color	[integer!]
 	clr-ptr [D3DCOLORVALUE]

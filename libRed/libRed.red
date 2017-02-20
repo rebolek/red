@@ -13,6 +13,12 @@ Red [
 	}
 ]
 
+#system-global [
+	on-unload: func [hInstance [integer!]][
+		if exec/lib-opened? [exec/redClose]
+	]
+]
+
 #system [
 	
 	#either OS = 'Windows [
@@ -78,6 +84,7 @@ Red [
 		print:		word/load "print"
 		extern:		word/load "extern"
 		redDo:		word/load "redDo"
+		redDoFile:	word/load "redDoFile"
 		redDoBlock:	word/load "redDoBlock"
 		redCall:	word/load "redCall"
 		redLDPath:	word/load "redLoadPath"
@@ -107,6 +114,8 @@ Red [
 		redSelect:	word/load "redSelect"
 		redSkip:	word/load "redSkip"
 		redTo:		word/load "redTo"
+		
+		redOpenLogFile: word/load "redOpenLogFile"
 	]
 	
 	ring: context [
@@ -239,6 +248,25 @@ Red [
 		ring/store stack/arguments
 	]
 	
+	redDoFile: func [
+		src		[c-string!]
+		return: [red-value!]
+		/local
+			res	 [red-value!]
+			file [red-file!]
+	][
+		CHECK_LIB_OPENED_RETURN(red-value!)
+		file: as red-file! import-string src names/redDoFile yes
+		file/header: TYPE_FILE
+		if last-error <> null [return last-error]
+		
+		TRAP_ERRORS(names/redDoFile [
+			stack/push as red-value! file
+			natives/do* yes -1 -1 -1
+			stack/unwind-last
+		])
+	]
+	
 	redDoBlock: func [
 		"Evaluates Red code"
 		code	[red-block!]	"Block to evaluate"
@@ -252,15 +280,11 @@ Red [
 		"Releases dynamic memory allocated for the current instance"
 	][
 		CHECK_LIB_OPENED
+		#if modules contains 'View [gui/cleanup]
+		
 		ring/destroy
-		;@@ Free the main buffers
-		free as byte-ptr! natives/table
-		free as byte-ptr! actions/table
-		free as byte-ptr! _random/table
-		free as byte-ptr! name-table
-		free as byte-ptr! action-table
-		free as byte-ptr! cycles/stack
-		free as byte-ptr! crypto/crc32-table
+		red/cleanup
+		lib-opened?: no
 	]
 	
 	redSetEncoding: func [
@@ -272,15 +296,25 @@ Red [
 	]
 	
 	redOpenLogFile: func [
-		name [c-string!]
+		name	[c-string!]
+		return: [red-value!]
+		/local
+			script [red-file!]
 	][
-		CHECK_LIB_OPENED
-		stdout: red/simple-io/open-file name red/simple-io/RIO_APPEND no
+		CHECK_LIB_OPENED_RETURN(red-value!)
+		script: as red-file! import-string name names/redOpenLogFile yes
+		script/header: TYPE_FILE
+		if last-error <> null [return last-error]
+
+		#if OS = 'Windows [red/platform/dos-console?: no]
+		stdout: red/simple-io/open-file file/to-OS-path script red/simple-io/RIO_APPEND yes
+		null
 	]
 	
 	redCloseLogFile: does [
 		CHECK_LIB_OPENED
 		red/simple-io/close-file stdout
+		#if OS = 'Windows [red/platform/dos-console?: yes]
 	]
 
 	redOpenLogWindow: func [return: [logic!]][
@@ -326,6 +360,19 @@ Red [
 		cell
 	]
 	
+	redDatatype: func [
+		type	[integer!]
+		return: [red-datatype!]
+		/local
+			cell [red-datatype!]
+	][
+		CHECK_LIB_OPENED_RETURN(red-datatype!)
+		cell: as red-datatype! ring/alloc
+		cell/header: TYPE_DATATYPE
+		cell/value: type
+		cell
+	]
+	
 	redInteger: func [
 		n		[integer!]
 		return: [red-integer!]
@@ -357,6 +404,27 @@ Red [
 	][
 		CHECK_LIB_OPENED_RETURN(red-pair!)
 		pair/make-at ring/alloc x y
+	]
+	
+	redTuple: func [
+		r		[integer!]
+		g		[integer!]
+		b		[integer!]
+		return: [red-tuple!]
+	][
+		CHECK_LIB_OPENED_RETURN(red-tuple!)
+		tuple/make-rgba ring/alloc r g b -1
+	]
+	
+	redTuple4: func [
+		r		[integer!]
+		g		[integer!]
+		b		[integer!]
+		a		[integer!]
+		return: [red-tuple!]
+	][
+		CHECK_LIB_OPENED_RETURN(red-tuple!)
+		tuple/make-rgba ring/alloc r g b a
 	]
 	
 	redSymbol: func [
@@ -954,6 +1022,7 @@ Red [
 		redOpen
 		redDo
 		redDoBlock
+		redDoFile
 		redClose
 		
 		redSetEncoding
@@ -965,9 +1034,12 @@ Red [
 		redUnset
 		redNone
 		redLogic
+		redDatatype
 		redInteger
 		redFloat
 		redPair
+		redTuple
+		redTuple4
 		redString
 		redSymbol
 		redWord
