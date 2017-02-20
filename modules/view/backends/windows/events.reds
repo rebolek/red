@@ -432,8 +432,14 @@ make-event: func [
 		]
 		EVT_KEY_DOWN [
 			key: msg/wParam and FFFFh
-			if key = VK_PROCESSKEY [return EVT_DISPATCH] ;-- IME-friendly exit
-			special-key: either char-key? as-byte key [-1][map-left-right key msg/lParam]
+			if key = VK_PROCESSKEY [			;-- IME-friendly exit
+				if ime-open? [special-key: -1]
+				return EVT_DISPATCH
+			]
+			special-key: either any [
+				ime-open?
+				char-key? as-byte key
+			][-1][map-left-right key msg/lParam]
 			gui-evt/flags: key or check-extra-keys no
 		]
 		EVT_KEY_UP [
@@ -448,7 +454,11 @@ make-event: func [
 				key and EVT_FLAG_CTRL_DOWN <> 0
 				96 < char char < 123					;-- #"a" <= char <= #"z"
 			][char: char + 64 special-key: -1]
-			if any [special-key = VK_LMENU special-key = VK_RMENU][special-key: -1]
+			if any [
+				key and EVT_FLAG_SHIFT_DOWN <> 0
+				special-key = VK_LMENU
+				special-key = VK_RMENU
+			][special-key: -1]
 			gui-evt/flags: char or key
 		]
 		EVT_SELECT [
