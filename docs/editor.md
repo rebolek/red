@@ -65,7 +65,7 @@ Editor is powered by a dialect. Every keypress generates a command that is parse
 * `'select 'value 'to ['start | 'end]` - expand selection to value start/end
 * `'append [char! | string! | 'newline]` - append value after cursor position
 * `'delete set value ['before | 'under]` - delete value at desired position
-* `'debug` - print debg info into console
+* `'debug` - print debug info into console
 * `'cut-selection` - cut selection from buffer
 * `'reduce-selection` - replace selection with its reduced value
 * `'find-selection` - find selected string and mark all occurences
