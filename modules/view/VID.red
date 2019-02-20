@@ -73,6 +73,10 @@ system/view/VID: context [
 		type: offset: size: size-x: text: color: enabled?: visible?: selected: image: 
 		rate: font: flags: options: para: data: extra: actors: draw: now?: init: none
 	]
+
+	style-proto: object [
+		name: style: opts: face: spec: none
+	]
 	
 	throw-error: func [spec [block!]][
 		either system/view/silent? [
@@ -765,6 +769,85 @@ system/view/VID: context [
 			panel
 		]
 	]
+
+
+
+	prepare-styling: function [
+		spec
+		local-styles
+	][
+
+		opts: copy opts-proto
+
+		unless set-word? name: first spec [throw-error spec]
+		value: first spec: next spec
+		unless style: any [
+			styled?: select local-styles value
+			select system/view/VID/styles value
+		][
+			throw-error spec
+		]
+		st: style/template
+		if st/type = 'window [throw-error spec]
+		if actors: st/actors [st/actors: none]	;-- avoid binding actors bodies to face object
+		face: make face! copy/deep st
+		spec: fetch-options face opts style spec local-styles true ;to-logic styling?
+
+		print ["after fetch:" mold spec]
+		print ["opts are:" mold opts]
+
+		if all [style/init][do bind style/init 'face]
+		
+		new-style: make style-proto []
+		new-style/name: name
+		new-style/style: style
+		new-style/opts: opts
+		new-style/face: face
+		new-style/spec: spec
+
+		new-style
+	]
+
+
+	make-style: function [
+		style
+		local-styles
+	][
+		
+
+
+
+
+		name: to word! style/name
+		value: copy style/style
+		opts: style/opts
+		face: style/face
+	
+
+
+		if empty? opt-words: [][append opt-words words-of opts] ;-- static cache
+
+
+
+
+		clean-style value/template: body-of face face/type
+		if opts/init [
+			either value/init [append value/init opts/init][
+				reduce/into [to-set-word 'init opts/init] tail value
+			]
+		]
+		either pos: find local-styles name [pos/2: value][ 
+			reduce/into [name value] tail local-styles
+		]
+		styled: make block! 4
+		foreach w opt-words [if get in opts w [append styled w]]
+		repend value [to-set-word 'styled styled]
+
+
+	]
+
+
+
 	set 'stylize function [
 		"Return a style sheet block"
 		spec [block!] "A block of style definitions"
@@ -775,39 +858,13 @@ system/view/VID: context [
 ; FIXME: local words to remove or something
 		face: none
 
-		opts: copy opts-proto
-		if empty? opt-words: [][append opt-words words-of opts] ;-- static cache
 		local-styles: any [css make block! 2]			;-- panel-local styles definitions
 		while [not tail? spec][							;-- process panel's content
-			unless set-word? name: first spec [throw-error spec]
-			value: first spec: next spec
-			unless style: any [
-				styled?: select local-styles value
-				select system/view/VID/styles value
-			][
-				throw-error spec
-			]
-			st: style/template
-			if st/type = 'window [throw-error spec]
-			if actors: st/actors [st/actors: none]	;-- avoid binding actors bodies to face object
-			face: make face! copy/deep st
-			spec: fetch-options face opts style spec local-styles true ;to-logic styling?
-			if all [style/init][do bind style/init 'face]
-			name: to word! name
-			value: copy style
-			clean-style value/template: body-of face face/type
-			if opts/init [
-				either value/init [append value/init opts/init][
-					reduce/into [to-set-word 'init opts/init] tail value
-				]
-			]
-			either pos: find local-styles name [pos/2: value][ 
-				reduce/into [name value] tail local-styles
-			]
-			styled: make block! 4
-			foreach w opt-words [if get in opts w [append styled w]]
-			repend value [to-set-word 'styled styled]
-			spec: next spec
+			print "calling prepare"
+			style: prepare-styling spec local-styles
+			print "calling make-style"
+			make-style style local-styles
+			spec: next style/spec
 		]
 		local-styles
 	]
