@@ -772,93 +772,43 @@ system/view/VID: context [
 		/styles
 			css	 [block!] "Base on existing style sheet"
 	][
-		print "hello world"
-
 ; FIXME: local words to remove or something
 		face: none
 
 		opts: copy opts-proto
-		
 		if empty? opt-words: [][append opt-words words-of opts] ;-- static cache
-
-
 		local-styles: any [css make block! 2]			;-- panel-local styles definitions
-
-
 		while [not tail? spec][							;-- process panel's content
-
-
 			unless set-word? name: first spec [throw-error spec]
-
-print ["style name:" name]
-
-print ["rest:" next spec]
-
 			value: first spec: next spec
-
-print "selecting original style..."
-
 			unless style: any [
 				styled?: select local-styles value
 				select system/view/VID/styles value
 			][
 				throw-error spec
 			]
-
-print ["style" value "selected"]
-
 			st: style/template
 			if st/type = 'window [throw-error spec]
-			
 			if actors: st/actors [st/actors: none]	;-- avoid binding actors bodies to face object
 			face: make face! copy/deep st
-
-
-print "some other stuff done"
-
-
 			spec: fetch-options face opts style spec local-styles true ;to-logic styling?
 			if all [style/init][do bind style/init 'face]
-
-
 			name: to word! name
 			value: copy style
 			clean-style value/template: body-of face face/type
-			
-print "next step..."
-
-
 			if opts/init [
 				either value/init [append value/init opts/init][
 					reduce/into [to-set-word 'init opts/init] tail value
 				]
 			]
-
-print "this passed too"
-
 			either pos: find local-styles name [pos/2: value][ 
 				reduce/into [name value] tail local-styles
 			]
-
-print "this one also"
-
 			styled: make block! 4
-
-print ["opts:" mold opts]
-print ["opt-words:" mold opt-words]
-
 			foreach w opt-words [if get in opts w [append styled w]]
 			repend value [to-set-word 'styled styled]
-
-
 			spec: next spec
-
-print ["loop ends and we are at " mold spec]
-
 		]
-
-print "and this is the end, buddy"
-
 		local-styles
 	]
 ]
