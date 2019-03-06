@@ -139,7 +139,7 @@ object [
 				either all [lf? not prin?][add-line copy str][vprin str]
 			]
 		][
-			either all [lf? not prin?][add-line str][vprin str]
+			either all [lf? not prin?][add-line copy str][vprin str]
 		]
 		prin?: not lf?
 		if system/console/running? [
@@ -415,7 +415,7 @@ object [
 
 	select-all: func [][
 		if empty? lines [exit]
-		reduce/into [1 1 line-cnt 1 + length? head line] clear selects
+		reduce/into [1 1 length? nlines 1 + length? head line] clear selects
 		system/view/platform/redraw console
 	]
 
