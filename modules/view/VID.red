@@ -69,7 +69,7 @@ system/view/VID: context [
 		type: offset: size: size-x: text: color: enabled?: visible?: selected: image: 
 		rate: font: flags: options: para: data: extra: actors: draw: now?: init: none
 	]
-	
+
 	throw-error: func [spec [block!]][
 		either system/view/silent? [
 			throw 'silent
@@ -497,7 +497,27 @@ system/view/VID: context [
 			]
 		]
 	]
-	
+
+	make-style: function [
+		name style [block!] face [object!] opts [object!] opt-words [block!] local-styles [block!]
+	][
+		name: to word! form name
+		value: copy style
+		clean-style value/template: body-of face face/type
+
+		if opts/init [
+			either value/init [append value/init opts/init][
+				reduce/into [to-set-word 'init opts/init] tail value
+			]
+		]
+		either pos: find local-styles name [pos/2: value][
+			reduce/into [name value] tail local-styles
+		]
+		styled: make block! 4
+		foreach w opt-words [if get in opts w [append styled w]]
+		repend value [to-set-word 'styled styled]
+	]
+
 	set 'layout function [
 		"Return a face with a pane built from a VID description"
 		spec		  [block!]	"Dialect block of styles, attributes, and layouts"
@@ -637,6 +657,10 @@ system/view/VID: context [
 					unless set-word? name: first spec: next spec [throw-error spec]
 					styling?: yes
 				]
+				styles	[
+					unless word? styles: first spec: next spec [throw-error spec]
+					append local-styles get styles
+				]
 			][
 				unless styling? [
 					name: none
@@ -653,7 +677,7 @@ system/view/VID: context [
 				]
 				st: style/template
 				if st/type = 'window [throw-error spec]
-				
+
 				if actors: st/actors [st/actors: none]	;-- avoid binding actors bodies to face object
 				face: make face! copy/deep st
 				if actors [face/actors: copy/deep st/actors: actors]
@@ -666,28 +690,14 @@ system/view/VID: context [
 				
 				either styling? [
 					if same? css local-styles [local-styles: copy css]
-					name: to word! form name
-					value: copy style
-					clean-style value/template: body-of face face/type
-					
-					if opts/init [
-						either value/init [append value/init opts/init][
-							reduce/into [to-set-word 'init opts/init] tail value
-						]
-					]
-					either pos: find local-styles name [pos/2: value][ 
-						reduce/into [name value] tail local-styles
-					]
-					styled: make block! 4
-					foreach w opt-words [if get in opts w [append styled w]]
-					repend value [to-set-word 'styled styled]
+					make-style name style face opts opt-words local-styles
 					styling?: off
 				][
 					blk: [style: _ vid-align: _ at-offset: #[none]]
 					blk/2: value
 					blk/4: align
 					add-option face new-line/all blk no
-				
+
 					;-- update cursor position --
 					either at-offset [
 						face/options/at-offset: face/offset: at-offset
@@ -759,4 +769,43 @@ system/view/VID: context [
 			panel
 		]
 	]
+
+	set 'stylize function [
+		"Build stylesheet list from description"
+		spec		  [block!]	"Dialect block of new-style: old-style definitions"
+		/master					"Add to or change master styles list"
+		/styles					"Use an existing styles list"
+			css		  [block!]	"Styles list"
+	][
+		local-styles: any [css make block! 2]			;-- panel-local styles definitions
+		opts: copy opts-proto
+		if empty? opt-words: [][append opt-words words-of opts] ;-- static cache
+
+		while [not tail? spec][
+			unless set-word? name: first spec [throw-error spec]
+			value: first spec: next spec
+			unless style: any [
+				styled?: select local-styles value
+				select system/view/VID/styles value
+			][
+				throw-error spec
+			]
+			st: style/template
+			if st/type = 'window [throw-error spec]
+
+			if actors: st/actors [st/actors: none]	;-- avoid binding actors bodies to face object
+			face: make face! copy/deep st
+			if actors [face/actors: copy/deep st/actors: actors]
+
+			if h: select system/view/metrics/def-heights face/type [face/size/y: h]
+
+			spec: fetch-options face opts style spec local-styles true
+
+			if same? css local-styles [local-styles: copy css]
+			make-style name style face opts opt-words local-styles
+			spec: next spec
+		]
+		either master [extend system/view/VID/styles local-styles][local-styles]
+	]
 ]
+
