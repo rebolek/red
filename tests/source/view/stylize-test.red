@@ -1,5 +1,12 @@
 Red[]
 
+#include %../../../quick-test/quick-test.red
+
+~~~start-file~~~ "stylize-test"
+
+do [
+
+
 ; TODO: Add deep options
 object-diff: func [
 	o1 [object!]
@@ -25,8 +32,10 @@ object-diff: func [
 	]
 ]
 
-make-style: func [style][
-	make face! select system/view/VID/styles/:style 'template
+make-style: func [style /with facets][
+	with: make face! select system/view/VID/styles/:style 'template
+	if facets [make with facets]
+	with
 ]
 
 first-face: func [vid][
@@ -54,22 +63,23 @@ do-test: func [
 	]
 ]
 
-
-tests: [
-	[
-		s: stylize [b: base]
-		same-values? [
-			first-face [base]
-			first-face [styles s base]
-		]
-	]
-	[
-		s: stylize [b: base]
-		same-values? [
-			first-face [base]
-			first-face [style b: base b]
-		]
-	]
+pick-face: func [face index][
+	pick face/pane index
 ]
 
+same-faces?: func [f1 f2][
+	empty? object-diff/omit f1 f2 [offset options parent on-chage* on-deep-change*]
+]
+
+===start-group=== "group #1"
+
+--test-- "basic stylize test #1"
+	--assert same-faces? pick-face layout [base] 1 make-style 'base
+
+===end-group===
+
+
+] ; --- end of do [
+
+~~~end-file~~~
 
