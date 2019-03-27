@@ -11,7 +11,7 @@ object-diff: func [
 	get-value: func [object word][
 		either error? try [object/:word][()][object/:word]
 	]
-	words: any[
+	words: any [
 		words 
 		union words-of o1 words-of o2
 	]
@@ -23,6 +23,10 @@ object-diff: func [
 			]
 		]
 	]
+]
+
+make-style: func [style][
+	make face! select system/view/VID/styles/:style 'template
 ]
 
 first-face: func [vid][
@@ -49,6 +53,7 @@ do-test: func [
 		]
 	]
 ]
+
 
 tests: [
 	[
