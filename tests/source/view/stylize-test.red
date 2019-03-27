@@ -34,7 +34,7 @@ object-diff: func [
 
 make-style: func [style /with facets][
 	with: make face! select system/view/VID/styles/:style 'template
-	if facets [make with facets]
+	if facets [with: make with facets]
 	with
 ]
 
@@ -73,9 +73,58 @@ same-faces?: func [f1 f2][
 
 ===start-group=== "group #1"
 
---test-- "basic stylize test #1"
+--test-- "modify style in place"
 	--assert same-faces? pick-face layout [base] 1 make-style 'base
+	--assert same-faces? pick-face layout [base 100x100] 1 make-style/with 'base [size: 100x100]
+	--assert same-faces? pick-face layout [base red] 1 make-style/with 'base [color: red]
+	--assert same-faces? pick-face layout [base red 100x100] 1 make-style/with 'base [color: red size: 100x100]
 
+--test-- "modify style with `style`"
+	--assert same-faces? pick-face layout [style b: base b] 1 make-style 'base
+	--assert same-faces? pick-face layout [style b: base 100x100 b] 1 make-style/with 'base [size: 100x100]
+	--assert same-faces? pick-face layout [style b: base red b] 1 make-style/with 'base [color: red]
+	--assert same-faces? pick-face layout [style b: base red 100x100 b] 1 make-style/with 'base [color: red size: 100x100]
+
+--test-- "modify style with `stylize`"
+	styles: stylize [
+		b: base
+		b-size: base 100x100
+		b-size-color: base 100x100 red
+		b-b: b
+		b-b-size: b-b 200x200
+		b-size-b: b-size 200x200
+	]
+	lay: layout [
+		styles styles
+		b b-size b-size-color
+		b-b b-b-size b-size-b
+	]
+	--assert same-faces? pick-face lay 1 make-style 'base
+	--assert same-faces? pick-face lay 2 make-style/with 'base [size: 100x100]
+	--assert same-faces? pick-face lay 3 make-style/with 'base [size: 100x100 color: red]
+	--assert same-faces? pick-face lay 4 make-style/with 'base []
+	--assert same-faces? pick-face lay 5 make-style/with 'base [size: 200x200]
+	--assert same-faces? pick-face lay 6 make-style/with 'base [size: 200x200]
+
+--test-- "modify style with `stylize/master`"
+	styles: stylize [
+		b: base
+		b-size: base 100x100
+		b-size-color: base 100x100 red
+		b-b: b
+		b-b-size: b-b 200x200
+		b-size-b: b-size 200x200
+	]
+	lay: layout [
+		b b-size b-size-color
+		b-b b-b-size b-size-b
+	]
+	--assert same-faces? pick-face lay 1 make-style 'base
+	--assert same-faces? pick-face lay 2 make-style/with 'base [size: 100x100]
+	--assert same-faces? pick-face lay 3 make-style/with 'base [size: 100x100 color: red]
+	--assert same-faces? pick-face lay 4 make-style/with 'base []
+	--assert same-faces? pick-face lay 5 make-style/with 'base [size: 200x200]
+	--assert same-faces? pick-face lay 6 make-style/with 'base [size: 200x200]
 ===end-group===
 
 
