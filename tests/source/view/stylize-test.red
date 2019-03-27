@@ -126,9 +126,9 @@ same-faces?: func [f1 f2][
 	--assert same-faces? pick-face lay 5 make-style/with 'base [size: 200x200]
 	--assert same-faces? pick-face lay 6 make-style/with 'base [size: 200x200]
 
---test-- "modify style with `stylize/master`"
+--test-- "modify style with `stylize/styles`"
 	; TODO: Global styles are now poluted by previous test, add a way to cleanup
-	styles1: stylize/master [
+	styles1: stylize [
 		_b: base
 		_b-size: base 100x100
 		_b-size-color: base 100x100 red
@@ -139,6 +139,7 @@ same-faces?: func [f1 f2][
 		_b-size-b: b-size 200x200
 	] styles1
 	lay: layout [
+		styles styles
 		_b _b-size _b-size-color
 		_b-b _b-b-size _b-size-b
 	]
