@@ -92,12 +92,15 @@ same-faces?: func [f1 f2][
 		b-size-color: base 100x100 red
 		b-b: b
 		b-b-size: b-b 200x200
-		b-size-b: b-size 200x200
+		b-size-size: b-size 200x200
+		b-size-b: b 250x250
+		b-size-b-color: b-size-b red
 	]
 	lay: layout [
 		styles styles
 		b b-size b-size-color
-		b-b b-b-size b-size-b
+		b-b b-b-size b-size-size
+		b-size-b b-size-b-color
 	]
 	--assert same-faces? pick-face lay 1 make-style 'base
 	--assert same-faces? pick-face lay 2 make-style/with 'base [size: 100x100]
@@ -105,6 +108,8 @@ same-faces?: func [f1 f2][
 	--assert same-faces? pick-face lay 4 make-style/with 'base []
 	--assert same-faces? pick-face lay 5 make-style/with 'base [size: 200x200]
 	--assert same-faces? pick-face lay 6 make-style/with 'base [size: 200x200]
+	--assert same-faces? pick-face lay 7 make-style/with 'base [size: 250x250]
+	--assert same-faces? pick-face lay 8 make-style/with 'base [size: 250x250 color: red]
 
 --test-- "modify style with `stylize/master`"
 	styles: stylize/master [
@@ -113,11 +118,14 @@ same-faces?: func [f1 f2][
 		b-size-color: base 100x100 red
 		b-b: b
 		b-b-size: b-b 200x200
-		b-size-b: b-size 200x200
+		b-size-size: b-size 200x200
+		b-size-b: b 250x250
+		b-size-b-color: b-size-b red
 	]
 	lay: layout [
 		b b-size b-size-color
-		b-b b-b-size b-size-b
+		b-b b-b-size b-size-size
+		b-size-b b-size-b-color
 	]
 	--assert same-faces? pick-face lay 1 make-style 'base
 	--assert same-faces? pick-face lay 2 make-style/with 'base [size: 100x100]
@@ -125,6 +133,8 @@ same-faces?: func [f1 f2][
 	--assert same-faces? pick-face lay 4 make-style/with 'base []
 	--assert same-faces? pick-face lay 5 make-style/with 'base [size: 200x200]
 	--assert same-faces? pick-face lay 6 make-style/with 'base [size: 200x200]
+	--assert same-faces? pick-face lay 7 make-style/with 'base [size: 250x250]
+	--assert same-faces? pick-face lay 8 make-style/with 'base [size: 250x250 color: red]
 
 --test-- "modify style with `stylize/styles`"
 	; TODO: Global styles are now poluted by previous test, add a way to cleanup
