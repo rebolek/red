@@ -38,31 +38,6 @@ make-style: func [style /with facets][
 	with
 ]
 
-first-face: func [vid][
-	first select layout vid 'pane
-]
-
-do-test: func [
-	vid
-	/local ignored-words s t
-][
-	; TODO: in options I need to ignore just `style`
-	ignored-words: [parent options on-change* on-deep-change*]
-	all reduce [
-		empty? object-diff/omit
-			first-face vid
-			first-face compose [style t: (vid) t]
-			ignored-words
-		do [
-			s: stylize compose [t: (vid)]
-			empty? object-diff/omit
-				first-face vid
-				first-face [styles s t]
-				ignored-words
-		]
-	]
-]
-
 pick-face: func [face index][
 	pick face/pane index
 ]
