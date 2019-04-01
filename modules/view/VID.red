@@ -265,7 +265,7 @@ system/view/VID: context [
 	fetch-expr: func [code [word!]][do/next next get code code]
 	
 	fetch-options: function [
-		face [object!] opts [object!] style [block!] spec [block!] css [block!] styling? [logic!]
+		face [object!] opts [object!] style [block!] spec [block!] css [map!] styling? [logic!]
 		/no-skip
 		/extern focal-face
 		return: [block!]
@@ -499,7 +499,7 @@ system/view/VID: context [
 	]
 
 	make-style: function [
-		name style [block!] face [object!] opts [object!] opt-words [block!] local-styles [block!]
+		name style [block!] face [object!] opts [object!] opt-words [block!] local-styles [map!]
 	][
 		name: to word! form name
 		value: copy style
@@ -510,12 +510,34 @@ system/view/VID: context [
 				reduce/into [to-set-word 'init opts/init] tail value
 			]
 		]
-		either pos: find local-styles name [pos/2: value][
-			reduce/into [name value] tail local-styles
-		]
+		local-styles/:name: value
 		styled: make block! 4
 		foreach w opt-words [if get in opts w [append styled w]]
 		repend value [to-set-word 'styled styled]
+	]
+
+	prepare-styling: function [
+		value
+		local-styles
+		spec
+		/local style
+	][
+		unless style: any [
+			styled?: select local-styles value
+			select system/view/VID/styles value
+		][
+			throw-error spec
+		]
+		st: style/template
+		if st/type = 'window [throw-error spec]
+
+		if actors: st/actors [st/actors: none]	;-- avoid binding actors bodies to face object
+		face: make face! copy/deep st
+		if actors [face/actors: copy/deep st/actors: actors]
+
+		if h: select system/view/metrics/def-heights face/type [face/size/y: h]
+
+		reduce [face style]
 	]
 
 	set 'layout function [
@@ -531,13 +553,13 @@ system/view/VID: context [
 			panel	  [object!]
 			divides   [integer! none!]
 		/styles					"Use an existing styles list"
-			css		  [block!]	"Styles list"
+			css		  [map! block!]	"Styles list"
 		/local axis anti								;-- defined in a SET block
 		/extern focal-face
 	][
 		background!:  make typeset! [image! file! url! tuple! word! issue!]
 		list:		  make block! 4						;-- panel's pane block
-		local-styles: any [css make block! 2]			;-- panel-local styles definitions
+		local-styles: to map! any [css copy #()]		;-- panel-local styles definitions
 		pane-size:	  0x0								;-- panel's content dynamic size
 		direction: 	  'across
 		align:		  'top
@@ -659,7 +681,7 @@ system/view/VID: context [
 				]
 				styles	[
 					unless word? styles: first spec: next spec [throw-error spec]
-					append local-styles get styles
+					extend local-styles get styles
 				]
 			][
 				unless styling? [
@@ -669,22 +691,8 @@ system/view/VID: context [
 						value: first spec: next spec
 					]
 				]
-				unless style: any [
-					styled?: select local-styles value
-					select system/view/VID/styles value
-				][
-					throw-error spec
-				]
-				st: style/template
-				if st/type = 'window [throw-error spec]
-
-				if actors: st/actors [st/actors: none]	;-- avoid binding actors bodies to face object
-				face: make face! copy/deep st
-				if actors [face/actors: copy/deep st/actors: actors]
-				
-				if h: select system/view/metrics/def-heights face/type [face/size/y: h]
+				set [face style] prepare-styling value local-styles spec
 				unless styling? [face/parent: panel]
-
 				spec: fetch-options face opts style spec local-styles to-logic styling?
 				if all [style/init not styling?][do bind style/init 'face]
 				
@@ -775,30 +783,16 @@ system/view/VID: context [
 		spec		  [block!]	"Dialect block of new-style: old-style definitions"
 		/master					"Add to or change master styles list"
 		/styles					"Use an existing styles list"
-			css		  [block!]	"Styles list"
+			css		  [map! block!]	"Styles list"
 	][
-		local-styles: any [css make block! 2]			;-- panel-local styles definitions
+		local-styles: to map! any [css copy #()]		;-- panel-local styles definitions
 		opts: copy opts-proto
 		if empty? opt-words: [][append opt-words words-of opts] ;-- static cache
 
 		while [not tail? spec][
 			unless set-word? name: first spec [throw-error spec]
 			value: first spec: next spec
-			unless style: any [
-				styled?: select local-styles value
-				select system/view/VID/styles value
-			][
-				throw-error spec
-			]
-			st: style/template
-			if st/type = 'window [throw-error spec]
-
-			if actors: st/actors [st/actors: none]	;-- avoid binding actors bodies to face object
-			face: make face! copy/deep st
-			if actors [face/actors: copy/deep st/actors: actors]
-
-			if h: select system/view/metrics/def-heights face/type [face/size/y: h]
-
+			set [face style] prepare-styling value local-styles spec
 			spec: fetch-options face opts style spec local-styles true
 
 			if same? css local-styles [local-styles: copy css]
