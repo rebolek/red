@@ -533,6 +533,7 @@ system/view/VID: context [
 
 		if actors: st/actors [st/actors: none]	;-- avoid binding actors bodies to face object
 		face: make face! copy/deep st
+		if face/pane [face/pane: copy/deep face/pane]
 		if actors [face/actors: copy/deep st/actors: actors]
 
 		if h: select system/view/metrics/def-heights face/type [face/size/y: h]
