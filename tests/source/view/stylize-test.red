@@ -22,7 +22,7 @@ object-diff: func [
 		words 
 		union words-of o1 words-of o2
 	]
-	if omit [words: difference words ignored]
+	if omit [words: exclude words ignored]
 	collect [
 		foreach word words [
 			unless equal? get-value o1 word get-value o2 word [
