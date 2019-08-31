@@ -76,136 +76,16 @@ context [
 		value
 	]
 
-	next-column-name: function [
-		"Return name of next column (A->B, Z->AA, ...)"
-		name	[char! string!]	"Name of current column"
-	][
-		name: copy name
-		length: length? name
-		repeat index length [
-			position: length - index + 1
-			previous: position - 1
-			either equal? #"Z" name/:position [
-				name/:position: #"A"
-				if position = 1 [
-					insert name #"A"
-				]
-			][
-				name/:position: name/:position + 1
-				break
-			]
-		]
-		name
-	]
-
-	make-header: function [
-		"Return default header (A-Z, AA-ZZ, ...)"
-		length [integer!] "Required length of header"
-	][
-		key: copy "A"
-		collect [
-			keep copy key
-			loop length - 1 [
-				keep key: next-column-name key
-			]
-		]
-	]
-
-	get-columns: func [
-		"Return all keywords from maps or objects"
-		data [block!] "Data must block of maps or objects"
-		/local columns
-	][
-		columns: words-of data/1
-		foreach value data [
-			append columns difference columns words-of value 
-		]
-		columns
-	]
-
-	encode-map: function [
-		"Make CSV string from map! of columns"
-		data		[map!] "Map of columns"
-		delimiter	[char! string!]	"Delimiter to use in CSV string"
-	][
-		output: make string! 1000
-		keys: keys-of data
-		append output to-csv-line keys delimiter
-		length: length? select data first keys
-		if strict? [
-			foreach key keys [
-				if length <> length? select data key [
-					return make error! non-aligned
-				]
-			]
-		]
-		repeat index length? select data first keys [
-			line: make string! 100
-			append output to-csv-line collect [
-				foreach key keys [keep data/:key/:index]
-			] delimiter
-		]
-		output
-	]
-
-	encode-maps: function [
-		"Make CSV string from block of maps/objects"
-		data		[block!] "Block of maps/objects"
-		delimiter	[char! string!]	"Delimiter to use in CSV string"
-	][
-		; this is block of maps/objects
-		columns: get-columns data
-		output: to-csv-line columns delimiter
-		append output collect/into [
-			foreach value data [
-				; construct block
-				line: collect [
-					foreach column columns [
-						keep either value/:column [value/:column][""]
-					]
-				]
-				keep to-csv-line line delimiter
-			]		
-		] make string! 1000
-		output
-	]
-
-	encode-flat: function [
-		"Convert block of fixed size records to CSV string"
-		data		[block!]		"Block treated as fixed size records"
-		delimiter	[char! string!]	"Delimiter to use in CSV string"
-		size		[integer!]		"Size of record"
-	][
-		unless zero? (length? data) // size [
-			return make error! non-aligned
-		]
-		collect/into [
-			until [
-				keep to-csv-line copy/part data size delimiter
-				tail? data: skip data size
-			]
-		] make string! 1000
-	]
-
 	encode-blocks: function [
 		"Convert block of records to CSV string"
 		data		[block!] "Block of blocks, each block is one record"
 		delimiter	[char! string!] "Delimiter to use in CSV string"
 	][
-	;	if align [
-	;		foreach line data [
-	;			if longest < length? line [longest: length? line]
-	;		]
-	;	]
 		length: length? first data
 		collect/into [
 			foreach line data [
 				if length <> length? line [return make error! non-aligned]
 				csv-line: to-csv-line line delimiter
-	;			if align [
-	;				; insert delimiters before last character (newline)
-	;				insert/dup back tail csv-line delimiter longest - length? line
-	;			]
 				keep csv-line
 			]
 		] make string! 1000
@@ -217,30 +97,12 @@ context [
 		data [string!] "Text CSV data to load"
 		/with
 			delimiter [char! string!] "Delimiter to use (default is comma)"
-		/header		"Treat first line as header; implies /as-columns if /as-records is not used"
-		/as-columns	"Returns named columns; default names if /header is not used"
-		/as-records	"Returns records instead of rows; implies /header"
-		/flat		"Returns a flat block; you need to know the number of fields"
-;		/align	"Align all records to have same length as longest record"
 		/trim		"Ignore spaces between quotes and delimiter"
 		/quote
 			qt-char [char!] "Use different character for quotes than double quote (^")"
 		/extern
 			quote-char
 	] [
-		; -- check for disallowed combination of refinements
-		disallowed: [
-			[as-columns as-records][flat as-columns][flat as-records][flat header]
-		]
-		foreach refs disallowed [
-			if all refs [
-				return make error! rejoin [
-					"Cannot use /" refs/1 " and /" refs/2 " refinements together"
-				]
-			]
-		]
-		if all [header not as-records][as-columns: true]
-
 		; -- init local values
 		delimiter: any [delimiter comma]
 		quote-char: any [qt-char #"^""]
@@ -348,38 +210,14 @@ context [
 			]
 			any newline
 		]
-
-		; -- adjust output when needed
-;		if align [
-;			foreach line output [
-;				if longest > length? line [
-;					append/dup line none longest - length? line
-;				]
-;			]
-;		]
-		if as-columns [
-			; TODO: do not use first, but longest line
-			key-index: 0
-			if longest > length? header [
-				header: make-header longest
-			]
-			foreach key header [
-				key-index: key-index + 1
-				out-map/:key: make block! length? output
-				foreach line output [append out-map/:key line/:key-index]
-			]
-			output: out-map
-		]
 		output
 	]
 
 	set 'to-csv function [
 		"Make CSV data from input value"
-		data [block! map! object!] "May be block of fixed size records, block of block records, or map columns"
+		data [block!] "Block of records"
 		/with "Delimiter to use (default is comma)"
 			delimiter [char! string!]
-		/skip	"Treat block as table of records with fixed length"
-			size [integer!]
 		/quote
 			qt-char [char!] "Use different character for quotes than double quote (^")"
 		/extern
@@ -389,25 +227,7 @@ context [
 		longest: 0
 		unless with [delimiter: comma]
 		quote-char: any [qt-char #"^""]
-		if any [map? data object? data][return encode-map data delimiter]
-		if skip [return encode-flat data delimiter size]
-		keyval?: any [map? first data object? first data]
-		unless any [
-			block? first data
-			keyval?
-		][data: reduce [data]] ; Only one line
-
-		; -- check if it's block of maps/objects
-		types: unique collect [foreach value data [keep type? value]]
-		either all [
-			1 = length? types
-			keyval?
-		][
-			; -- this is block of maps
-			encode-maps data delimiter
-		][
-			; this is block of blocks
-			encode-blocks data delimiter
-		]
+		unless block? first data [data: reduce [data]] ; Only one line
+		encode-blocks data delimiter
 	]
 ]
