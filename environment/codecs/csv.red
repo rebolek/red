@@ -159,26 +159,7 @@ context [
 					return make error! non-aligned
 				]
 				if longest < length [longest: length]
-				either as-records [
-					; extend header when needed
-					if longest > length? header [
-						loop longest - (length? header) [
-							append header next-column-name last header
-						]
-					]
-					; append line to output
-					value: make map! length
-					repeat index length [
-						value/(header/:index): line/:index
-					]
-					append output value
-				][
-					either flat [
-						append output copy line
-					][
-						append/only output copy line
-					]
-				]
+				append/only output copy line
 			)
 			init
 		]
@@ -187,23 +168,6 @@ context [
 
 		; -- main code
 		parsed?: parse data [
-			opt [
-				if (header) 
-				values newline
-				(header: copy line)
-				init
-			]
-			mark: (
-				if all [
-					header 
-					any [
-						equal? mark head mark
-						empty? mark
-					]
-				][do make error! "CSV data are too small to use /HEADER refinement"]
-			)
-			; -- Prepare default header (will be expanded when necessary)
-			(unless header [header: make-header 1])
 			[
 				init some line-rule
 			|	init values add-line
