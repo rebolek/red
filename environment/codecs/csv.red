@@ -315,7 +315,7 @@ context [
 					repeat index length [
 						value/(header/:index): line/:index
 					]
-					append output value
+					append output copy value
 				][
 					either flat [
 						append output copy line
