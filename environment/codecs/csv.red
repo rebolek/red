@@ -33,6 +33,7 @@ context [
 	ignore-empty?: false ; If line ends with delimiter, do not add empty string
 	strict?: true		; Throw error on non-aligned records
 	quote-char: #"^""
+	double-quote: {""}
 
 	; -- internal values
 	parsed?: none		; Keep state of parse result (for debugging purposes)
@@ -43,32 +44,45 @@ context [
 		"Join values as a string and put delimiter between them"
 		data		[block!]		"Series to join"
 		delimiter	[char! string!]	"Delimiter to put between values"
-		/only "Do not add newline"
 	][
+;		collect/into [
+;			foreach value data [
+;				keep rejoin [escape-value value delimiter delimiter]
+;			]
+;		] output: make string! 1000
 		collect/into [
-			foreach value data [
-				keep rejoin [escape-value value delimiter delimiter]
+			while [not tail? next data][
+				keep escape-value first data delimiter
+				keep delimiter
+				data: next data
 			]
-		] output: make string! 1000
-		take/part/last output length? form delimiter
-		unless only [append output newline]
-		output
+			keep escape-value first data delimiter
+			keep newline
+		] clear ""
 	]
+
+t1: charset { ",^/}
 
 	escape-value: function [
 		"Escape quotes and when required, enclose value in quotes"
 		value		[any-type!]		"Value to escape (is formed)"
 		delimiter	[char! string!]	"Delimiter character to be escaped"
+		/extern quote-char double-quote
 	][
-		value: form value
-		double-quote: rejoin [quote-char quote-char]
-		parse value [
-			some [
-				change quote-char double-quote (quot?: true)
-			|	[space | quote-char | delimiter | newline](quot?: true)
-			|	skip
-			]
-		]
+		quot?: false
+		unless string? value [value: form value]
+;		parse value [
+;			some [
+;				change quote-char double-quote (quot?: true)
+;			|	[space | quote-char | delimiter | newline](quot?: true)
+;			|	t1 (quot?: true)
+;			|	skip
+;			]
+;		]
+		len: length? value
+		replace/all value quote-char double-quote
+		unless equal? len length? value [quot?: true]
+		if find value t1 [quot?: true]
 		if quot? [
 			insert value quote-char
 			append value quote-char
@@ -383,12 +397,13 @@ context [
 		/quote
 			qt-char [char!] "Use different character for quotes than double quote (^")"
 		/extern
-			quote-char
+			quote-char double-qoute
 	][
 		; Initialization
 		longest: 0
 		unless with [delimiter: comma]
 		quote-char: any [qt-char #"^""]
+		double-quote: rejoin [quote-char quote-char]
 		if any [map? data object? data][return encode-map data delimiter]
 		if skip [return encode-flat data delimiter size]
 		keyval?: any [map? first data object? first data]
