@@ -34,6 +34,7 @@ context [
 	strict?: true		; Throw error on non-aligned records
 	quote-char: #"^""
 	double-quote: {""}
+	quotable-chars: charset { ",^/}
 
 	; -- internal values
 	parsed?: none		; Keep state of parse result (for debugging purposes)
@@ -61,28 +62,19 @@ context [
 		] clear ""
 	]
 
-t1: charset { ",^/}
 
 	escape-value: function [
 		"Escape quotes and when required, enclose value in quotes"
 		value		[any-type!]		"Value to escape (is formed)"
 		delimiter	[char! string!]	"Delimiter character to be escaped"
-		/extern quote-char double-quote
+		/extern quote-char double-quote quotable-chars
 	][
 		quot?: false
 		unless string? value [value: form value]
-;		parse value [
-;			some [
-;				change quote-char double-quote (quot?: true)
-;			|	[space | quote-char | delimiter | newline](quot?: true)
-;			|	t1 (quot?: true)
-;			|	skip
-;			]
-;		]
 		len: length? value
 		replace/all value quote-char double-quote
 		unless equal? len length? value [quot?: true]
-		if find value t1 [quot?: true]
+		if find value quotable-chars [quot?: true]
 		if quot? [
 			insert value quote-char
 			append value quote-char
@@ -397,13 +389,14 @@ t1: charset { ",^/}
 		/quote
 			qt-char [char!] "Use different character for quotes than double quote (^")"
 		/extern
-			quote-char double-qoute
+			quote-char double-quote quotable-chars
 	][
 		; Initialization
 		longest: 0
-		unless with [delimiter: comma]
+		delimiter: any [delimiter comma]
 		quote-char: any [qt-char #"^""]
 		double-quote: rejoin [quote-char quote-char]
+		quotable-chars: charset rejoin [space newline quote-char delimiter]
 		if any [map? data object? data][return encode-map data delimiter]
 		if skip [return encode-flat data delimiter size]
 		keyval?: any [map? first data object? first data]
