@@ -46,11 +46,6 @@ context [
 		data		[block!]		"Series to join"
 		delimiter	[char! string!]	"Delimiter to put between values"
 	][
-;		collect/into [
-;			foreach value data [
-;				keep rejoin [escape-value value delimiter delimiter]
-;			]
-;		] output: make string! 1000
 		collect/into [
 			while [not tail? next data][
 				keep escape-value first data delimiter
@@ -198,20 +193,11 @@ context [
 		data		[block!] "Block of blocks, each block is one record"
 		delimiter	[char! string!] "Delimiter to use in CSV string"
 	][
-	;	if align [
-	;		foreach line data [
-	;			if longest < length? line [longest: length? line]
-	;		]
-	;	]
 		length: length? first data
 		collect/into [
 			foreach line data [
 				if length <> length? line [return make error! non-aligned]
 				csv-line: to-csv-line line delimiter
-	;			if align [
-	;				; insert delimiters before last character (newline)
-	;				insert/dup back tail csv-line delimiter longest - length? line
-	;			]
 				keep csv-line
 			]
 		] make string! 1000
@@ -227,7 +213,6 @@ context [
 		/as-columns	"Returns named columns; default names if /header is not used"
 		/as-records	"Returns records instead of rows; implies /header"
 		/flat		"Returns a flat block; you need to know the number of fields"
-;		/align	"Align all records to have same length as longest record"
 		/trim		"Ignore spaces between quotes and delimiter"
 		/quote
 			qt-char [char!] "Use different character for quotes than double quote (^")"
@@ -356,13 +341,6 @@ context [
 		]
 
 		; -- adjust output when needed
-;		if align [
-;			foreach line output [
-;				if longest > length? line [
-;					append/dup line none longest - length? line
-;				]
-;			]
-;		]
 		if as-columns [
 			; TODO: do not use first, but longest line
 			key-index: 0
