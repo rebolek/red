@@ -13,6 +13,7 @@ Red [
 	Documentation: https://github.com/red/red/wiki/CSV-codec 
 ]
 
+do [
 put system/codecs 'csv context [
 	Title:     "CSV codec"
 	Name:      'CSV
@@ -396,4 +397,5 @@ context [
 			encode-blocks data delimiter
 		]
 	]
+]
 ]
