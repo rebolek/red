@@ -46,17 +46,16 @@ context [
 		data		[block!]		"Series to join"
 		delimiter	[char! string!]	"Delimiter to put between values"
 	][
-		collect/into [
-			while [not tail? next data][
-				keep escape-value first data delimiter
-				keep delimiter
-				data: next data
-			]
-			keep escape-value first data delimiter
-			keep newline
-		] clear ""
+		result: clear ""
+		while [not tail? next data][
+			append result escape-value first data delimiter
+			append result delimiter
+			data: next data
+		]
+		append result escape-value first data delimiter
+		append result newline
+		result
 	]
-
 
 	escape-value: function [
 		"Escape quotes and when required, enclose value in quotes"
@@ -180,12 +179,12 @@ context [
 		unless zero? (length? data) // size [
 			return make error! non-aligned
 		]
-		collect/into [
-			until [
-				keep to-csv-line copy/part data size delimiter
-				tail? data: skip data size
-			]
-		] make string! 1000
+		result: make string! 1000
+		until [
+			append result to-csv-line copy/part data size delimiter
+			tail? data: skip data size
+		]
+		result
 	]
 
 	encode-blocks: function [
@@ -194,13 +193,12 @@ context [
 		delimiter	[char! string!] "Delimiter to use in CSV string"
 	][
 		length: length? first data
-		collect/into [
-			foreach line data [
-				if length <> length? line [return make error! non-aligned]
-				csv-line: to-csv-line line delimiter
-				keep csv-line
-			]
-		] make string! 1000
+		result: make string! 1000
+		foreach line data [
+			if length <> length? line [return make error! non-aligned]
+			append result to-csv-line line delimiter
+		]
+		result
 	]
 
 	; -- main functions
@@ -245,6 +243,27 @@ context [
 		newline: [crlf | lf | cr]
 		quotchars: charset reduce ['not quote-char]
 		valchars: charset reduce ['not append copy "^/^M" delimiter]
+		fn-add-value: func [][
+			if trim [
+				value: system/words/trim value
+				all [
+					quote-char = first value
+					quote-char = last value
+					take value
+					take/last value
+				]
+			]
+			append line copy value
+		]
+		fn-check-header: func [][
+			if all [
+				header 
+				any [
+					equal? mark head mark
+					empty? mark
+				]
+			][do make error! "CSV data are too small to use /HEADER refinement"]
+		]
 		quoted-value: [
 			(clear value) [
 				quote-char
@@ -261,18 +280,7 @@ context [
 		normal-value: [s: any valchars e: (value: copy/part s e)]
 		single-value: [quoted-value | normal-value]
 		values: [any [single-value delimiter add-value] single-value add-value]
-		add-value: [(
-			if trim [
-				value: system/words/trim value
-				all [
-					quote-char = first value
-					quote-char = last value
-					take value
-					take/last value
-				]
-			]
-			append line copy value
-		)]
+		add-value: [(fn-add-value)]
 		add-line: [
 			(
 				; remove last empty element, when required
@@ -322,15 +330,7 @@ context [
 				(header: copy line)
 				init
 			]
-			mark: (
-				if all [
-					header 
-					any [
-						equal? mark head mark
-						empty? mark
-					]
-				][do make error! "CSV data are too small to use /HEADER refinement"]
-			)
+			mark: (fn-check-header)
 			; -- Prepare default header (will be expanded when necessary)
 			(unless header [header: make-header 1])
 			[
