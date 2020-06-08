@@ -677,7 +677,7 @@ context [
 		code-refs: make block! 1000
 		data-refs: make block! 100
 		foreach [name spec] job/symbols [
-			either all [spec/1 = 'global block? spec/4][
+			either all [find [global native] spec/1 block? spec/4][
 				foreach ref spec/4 [append data-refs ref]
 			][
 				foreach ref spec/3 [append code-refs ref]
@@ -819,11 +819,13 @@ context [
 			code	".text"
 			data  	".data"
 			import	".rdata"
+			export	".edata"
 			rsrc	".rsrc"
 			idata	".idata"
+			reloc	".reloc"
 		] name
 		change s: form-struct sh append form name null
-		change spec s	
+		change spec s
 	]
 
 	icon-number?: func [icons [block!] /local data num][

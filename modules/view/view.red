@@ -247,7 +247,7 @@ on-face-deep-change*: function ["Internal use only" owner word target action new
 						if owner/type <> 'screen [
 							if all [
 								find [tab-panel window panel] owner/type
-								not find [cleared removed taken move] action 
+								find [inserted appended poked changed moved] action 
 							][
 								faces: skip head target index	;-- zero-based absolute index
 								loop part [
@@ -438,7 +438,7 @@ face!: object [				;-- keep in sync with facet! enum
 			if find [field text] type [
 				if word = 'text [
 					set-quiet 'data any [
-						all [not empty? new attempt/safer [load new]]
+						all [not empty? new find scalar! scan new attempt/safer [load new]]
 						all [options options/default]
 					]
 				]
@@ -738,8 +738,10 @@ show: function [
 	
 	either all [face/state face/state/1][
 		pending: face/state/3
-		
+
 		if all [pending not empty? pending][
+			pending: copy pending
+			clear face/state/3
 			foreach [owner word target action new index part state] pending [
 				on-face-deep-change* owner word target action new index part state yes
 			]
@@ -749,7 +751,7 @@ show: function [
 	][
 		new?: yes
 		
-		if face/type <> 'screen [
+		either face/type <> 'screen [
 			if all [not force face/type <> 'window][
 				unless parent [cause-error 'script 'not-linked []]
 				if all [object? face/parent face/parent/type <> 'tab-panel][face/parent: none]
@@ -771,7 +773,9 @@ show: function [
 
 			obj: system/view/platform/make-view face p
 			if with [face/parent: parent]
-			
+
+			face/state: reduce [obj 0 none false]
+
 			foreach field [para font][
 				if all [field: face/:field p: in field 'parent][
 					either block? p: get p [
@@ -797,8 +801,7 @@ show: function [
 					append pane face
 				]
 			]
-		]
-		face/state: reduce [obj 0 none false]
+		][face/state: reduce [obj 0 none false]]
 	]
 
 	if face/pane [

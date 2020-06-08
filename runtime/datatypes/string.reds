@@ -44,26 +44,26 @@ string: context [
 		#"^(00)" #"^(00)" #"^(00)" #"^(00)" #"^(00)" #"^(00)" #"^^"	   #"^(00)" ;-- 5Fh
 	]
 
-	escape-url-chars: [							;-- ESC_NONE: #"^(FF)" ESC_URL: #"^(FE)"
-		#"^(FE)" #"^(FE)" #"^(FE)" #"^(FE)" #"^(FE)" #"^(FE)" #"^(FE)" #"^(FE)" ;-- 07h
-		#"^(FE)" #"^(FE)" #"^(FE)" #"^(FE)" #"^(FE)" #"^(FE)" #"^(FE)" #"^(FE)" ;-- 0Fh
-		#"^(FE)" #"^(FE)" #"^(FE)" #"^(FE)" #"^(FE)" #"^(FE)" #"^(FE)" #"^(FE)" ;-- 17h
-		#"^(FE)" #"^(FE)" #"^(FE)" #"^(FE)" #"^(FE)" #"^(FE)" #"^(FE)" #"^(FE)" ;-- 1Fh
-		#"^(FE)" #"^(FF)" #"^(FE)" #"^(FF)" #"^(FF)" #"^(FE)" #"^(FF)" #"^(FF)" ;-- 27h
-		#"^(FE)" #"^(FE)" #"^(FF)" #"^(FF)" #"^(FF)" #"^(FF)" #"^(FF)" #"^(FF)" ;-- 2Fh
-		#"^(00)" #"^(01)" #"^(02)" #"^(03)" #"^(04)" #"^(05)" #"^(06)" #"^(07)" ;-- 37h
-		#"^(08)" #"^(09)" #"^(FF)" #"^(FE)" #"^(FE)" #"^(FF)" #"^(FE)" #"^(FF)" ;-- 3Fh
-		#"^(FF)" #"^(0A)" #"^(0B)" #"^(0C)" #"^(0D)" #"^(0E)" #"^(0F)" #"^(FF)" ;-- 47h
-		#"^(FF)" #"^(FF)" #"^(FF)" #"^(FF)" #"^(FF)" #"^(FF)" #"^(FF)" #"^(FF)" ;-- 4Fh
-		#"^(FF)" #"^(FF)" #"^(FF)" #"^(FF)" #"^(FF)" #"^(FF)" #"^(FF)" #"^(FF)" ;-- 57h
-		#"^(FF)" #"^(FF)" #"^(FF)" #"^(FE)" #"^(FF)" #"^(FE)" #"^(FF)" #"^(FF)" ;-- 5Fh
-		#"^(FF)" #"^(0A)" #"^(0B)" #"^(0C)" #"^(0D)" #"^(0E)" #"^(0F)" #"^(FF)" ;-- 67h
-		#"^(FF)" #"^(FF)" #"^(FF)" #"^(FF)" #"^(FF)" #"^(FF)" #"^(FF)" #"^(FF)" ;-- 6Fh
-		#"^(FF)" #"^(FF)" #"^(FF)" #"^(FF)" #"^(FF)" #"^(FF)" #"^(FF)" #"^(FF)" ;-- 77h
-		#"^(FF)" #"^(FF)" #"^(FF)" #"^(FE)" #"^(FF)" #"^(FE)" #"^(FF)" #"^(FF)" ;-- 7Fh
-	]
+	escape-url-chars: #{								;-- ESC_NONE: #"^(FF)" ESC_URL: #"^(FE)"
+		FE FE FE FE FE FE FE FE ;-- 07h
+		FE FE FE FE FE FE FE FE ;-- 0Fh
+		FE FE FE FE FE FE FE FE ;-- 17h
+		FE FE FE FE FE FE FE FE ;-- 1Fh
+		FE FF FE FF FF FE FF FF ;-- 27h
+		FE FE FF FF FF FF FF FF ;-- 2Fh
+		00 01 02 03 04 05 06 07 ;-- 37h
+		08 09 FF FE FE FF FE FF ;-- 3Fh
+		FF 0A 0B 0C 0D 0E 0F FF ;-- 47h
+		FF FF FF FF FF FF FF FF ;-- 4Fh
+		FF FF FF FF FF FF FF FF ;-- 57h
+		FF FF FF FE FF FE FF FF ;-- 5Fh
+		FF 0A 0B 0C 0D 0E 0F FF ;-- 67h
+		FF FF FF FF FF FF FF FF ;-- 6Fh
+		FF FF FF FF FF FF FF FF ;-- 77h
+		FF FF FF FE FF FE FF FF ;-- 7Fh
+	}
 
-	utf8-buffer: [#"^(00)" #"^(00)" #"^(00)" #"^(00)"]
+	utf8-buffer: #{00000000}
 
 	to-float: func [
 		s		[byte-ptr!]
@@ -467,7 +467,7 @@ string: context [
 		switch GET_UNIT(s) [
 			Latin1 [
 				case [
-					cp <= FFh [
+					cp <= 7Fh [
 						node: s/node
 						p: alloc-tail-unit s 1
 						p/1: as-byte cp
@@ -717,6 +717,9 @@ string: context [
 			any [op = COMP_EQUAL op = COMP_FIND op = COMP_STRICT_EQUAL op = COMP_NOT_EQUAL]
 		][return 0]
 
+		if TYPE_OF(str1) = TYPE_SYMBOL [symbol/make-red-string as red-symbol! str1]
+		if TYPE_OF(str2) = TYPE_SYMBOL [symbol/make-red-string as red-symbol! str2]
+
 		s1: GET_BUFFER(str1)
 		s2: GET_BUFFER(str2)
 		unit1: GET_UNIT(s1)
@@ -891,14 +894,9 @@ string: context [
 				][no]
 			]
 			default  [
-				either all [								;@@ ANY_STRING - TAG
-					type <> TYPE_STRING
-					type <> TYPE_FILE
-					type <> TYPE_URL
-					type <> TYPE_EMAIL
-				][no][
+				either ANY_STRING?(type) [				;-- TYPE_TAG excluded
 					zero? equal? str as red-string! value op yes
-				]
+				][no]
 			]
 		]
 	]
@@ -933,8 +931,9 @@ string: context [
 	][
 		type1: TYPE_OF(str1)
 		type2: TYPE_OF(str2)
-		assert any [type1 = TYPE_SYMBOL ANY_STRING?(type1)]
-		assert any [type2 = TYPE_SYMBOL ANY_STRING?(type2)]
+		if type1 = TYPE_SYMBOL [symbol/make-red-string as red-symbol! str1]
+		if type2 = TYPE_SYMBOL [symbol/make-red-string as red-symbol! str2]
+
 		s1: GET_BUFFER(str1)
 		s2: GET_BUFFER(str2)
 		unit1: GET_UNIT(s1)
@@ -980,7 +979,7 @@ string: context [
 		if size <= 0 [exit]
 
 		size1: (as-integer s1/tail - s1/offset) + size
-		if s1/size < size1 [
+		if (as byte-ptr! s1/size) < (as byte-ptr! size1) [	;-- force to use unsigned comparison
 			same?: s1 = s2
 			s1: expand-series s1 size1 * 2
 			if same? [s2: s1]
@@ -1134,18 +1133,18 @@ string: context [
 	
 	make-at: func [
 		slot	[red-value!]
-		size 	[integer!]								;-- number of bytes to pre-allocate
+		size 	[integer!]								;-- number of codepoints to pre-allocate
 		unit	[integer!]
 		return:	[red-string!]
 		/local 
 			str	[red-string!]
 	][
 		str: as red-string! slot
-		str/header: TYPE_UNSET
+		set-type slot TYPE_UNSET
 		str/head:	0
-		str/node:	alloc-bytes size << (unit >> 1)
+		str/node:	alloc-codepoints size unit
 		str/cache:	null
-		str/header: TYPE_STRING
+		set-type slot TYPE_STRING
 		str
 	]
 	
@@ -1287,6 +1286,9 @@ string: context [
 			proto
 		][
 			either type = TYPE_BINARY [
+				if TYPE_OF(spec) = TYPE_MONEY [
+					fire [TO_ERROR(script bad-make-arg) datatype/push TYPE_BINARY spec]
+				]
 				as red-string! binary/to as red-binary! proto spec type
 			][
 				to as red-value! proto spec type
@@ -1425,7 +1427,7 @@ string: context [
 	][
 		idx: cp + 1
 		case [
-			any [cp = 1Eh all [all? cp > 7Fh]][
+			any [cp = 1Eh all [80h <= cp cp <= 9Fh] all [all? cp > 7Fh]][
 				append-char GET_BUFFER(buffer) as-integer #"^^"
 				append-char GET_BUFFER(buffer) as-integer #"("
 				concatenate-literal buffer to-hex cp yes
@@ -1601,22 +1603,21 @@ string: context [
 		str2	[red-string!]							;-- second operand (any-string!)
 		op		[integer!]								;-- type of comparison
 		return:	[integer!]
+		/local
+			type1 type2 [integer!]
 	][
 		#if debug? = yes [if verbose > 0 [print-line "string/compare"]]
 		
+		type1: TYPE_OF(str1)
+		type2: TYPE_OF(str2)
+		
 		if all [
-			TYPE_OF(str2) <> TYPE_OF(str1)
+			type1 <> type2
 			any [
+				not ANY_STRING?(type2)
 				all [
 					op <> COMP_EQUAL
 					op <> COMP_NOT_EQUAL
-				]
-				all [
-					TYPE_OF(str2) <> TYPE_STRING		;@@ use ANY_STRING?
-					TYPE_OF(str2) <> TYPE_FILE
-					TYPE_OF(str2) <> TYPE_URL
-					TYPE_OF(str2) <> TYPE_TAG
-					TYPE_OF(str2) <> TYPE_EMAIL
 				]
 			]
 		][RETURN_COMPARE_OTHER]
@@ -1923,13 +1924,7 @@ string: context [
 			]
 		]
 
-		case?: either any [ 							;-- inverted case? meaning
-			type = TYPE_STRING							;@@ use ANY_STRING?
-			type = TYPE_FILE
-			type = TYPE_URL
-			type = TYPE_TAG
-			type = TYPE_EMAIL
-		][not case?][no]
+		case?: either ANY_STRING?(type) [not case?][no]
 		if same? [case?: no]
 		reverse?: any [reverse? last?]					;-- reduce both flags to one
 		step: step << (unit >> 1)
@@ -1954,11 +1949,7 @@ string: context [
 				bs?:   yes
 				case?: no
 			]
-			TYPE_STRING
-			TYPE_FILE
-			TYPE_URL
-			TYPE_TAG
-			TYPE_EMAIL
+			TYPE_ANY_STRING
 			TYPE_BINARY
 			TYPE_WORD [
 				either TYPE_OF(value) = TYPE_WORD [
@@ -2113,11 +2104,7 @@ string: context [
 		
 		if TYPE_OF(result) <> TYPE_NONE [
 			offset: switch TYPE_OF(value) [
-				TYPE_STRING
-				TYPE_FILE
-				TYPE_URL
-				TYPE_TAG
-				TYPE_EMAIL
+				TYPE_ANY_STRING
 				TYPE_WORD
 				TYPE_BINARY [
 					either TYPE_OF(value) = TYPE_WORD [
@@ -2179,6 +2166,7 @@ string: context [
 			flags	[integer!]
 			mult	[integer!]
 			offset	[integer!]
+			chk?	[logic!]
 	][
 		step: 1
 		s: GET_BUFFER(str)
@@ -2286,8 +2274,9 @@ string: context [
 				flags: step << 2 or flags
 			]
 		]
+		chk?: ownership/check as red-value! str words/_sort null str/head 0
 		_sort/qsort buffer len unit * step op flags cmp
-		ownership/check as red-value! str words/_sort null str/head 0
+		if chk? [ownership/check as red-value! str words/_sorted null str/head 0]
 		str
 	]
 
@@ -2319,6 +2308,7 @@ string: context [
 			type	  [integer!]
 			index	  [integer!]
 			tail?	  [logic!]
+			chk?	  [logic!]
 			action	  [red-word!]
 	][
 		#if debug? = yes [if verbose > 0 [print-line "string/insert"]]
@@ -2363,6 +2353,7 @@ string: context [
 			action: words/_insert
 			str/head
 		]
+		chk?: ownership/check as red-value! str action value index part
 		
 		while [not zero? cnt][							;-- /dup support
 			type: TYPE_OF(value)
@@ -2396,11 +2387,9 @@ string: context [
 					]
 					added: added + 1
 				][
-					either any [
-						type = TYPE_STRING				;@@ replace with ANY_STRING?
-						type = TYPE_FILE 
-						type = TYPE_URL
-						type = TYPE_EMAIL
+					either all [
+						ANY_STRING?(type)
+						type <> TYPE_TAG				;-- preserve angle brackets
 					][
 						form-buf: as red-string! cell
 					][
@@ -2426,8 +2415,10 @@ string: context [
 			cnt: cnt - 1
 		]
 		if part < 0 [part: 1]							;-- ownership/check needs part >= 0
-		ownership/check as red-value! str action value index part
-		
+		if chk? [
+			action: either append? [words/_appended][words/_inserted]
+			ownership/check as red-value! str action value index part
+		]
 		either append? [str/head: 0][
 			added: added * dup-n
 			str/head: str/head + added
@@ -2455,6 +2446,7 @@ string: context [
 			unit2	[integer!]
 			head1	[byte-ptr!]
 			head2	[byte-ptr!]
+			chk? chk2? [logic!]
 	][
 		s1:    GET_BUFFER(str1)
 		unit1: GET_UNIT(s1)
@@ -2466,12 +2458,14 @@ string: context [
 		head2: (as byte-ptr! s2/offset) + (str2/head << (log-b unit2))
 		if head2 = as byte-ptr! s2/tail [return str1]				;-- early exit if nothing to swap
 
+		chk?:  ownership/check as red-value! str1 words/_swap null str1/head 1
+		chk2?: ownership/check as red-value! str2 words/_swap null str2/head 1
 		char1: get-char head1 unit1
 		char2: get-char head2 unit2
 		poke-char s1 head1 char2
 		poke-char s2 head2 char1
-		ownership/check as red-value! str1 words/_swap null str1/head 1
-		ownership/check as red-value! str2 words/_swap null str2/head 1
+		if chk?  [ownership/check as red-value! str1 words/_swaped null str1/head 1]
+		if chk2? [ownership/check as red-value! str2 words/_swaped null str2/head 1]
 		str1
 	]
 
@@ -2690,6 +2684,7 @@ string: context [
 			s		[series!]
 			unit	[integer!]
 			type	[integer!]
+			chk?	[logic!]
 	][
 		str: as red-string! _series/take as red-series! str part-arg deep? last?
 		s: GET_BUFFER(str)
@@ -2698,6 +2693,7 @@ string: context [
 			not OPTION?(part-arg)
 			1 = _series/get-length as red-series! str yes
 		][
+			chk?: ownership/check as red-value! str words/_take null str/head 0
 			unit: GET_UNIT(s)
 			type: TYPE_OF(str)
 			either type = TYPE_VECTOR [
@@ -2709,6 +2705,7 @@ string: context [
 				char/header: type
 				char/value:  get-char as byte-ptr! s/offset unit
 			]
+			if chk? [ownership/check as red-value! str words/_taken null str/head 0]
 		]
 		as red-value! str
 	]
@@ -2722,16 +2719,19 @@ string: context [
 		all?		[logic!]
 		with-arg	[red-value!]
 		return:		[red-series!]
+		/local
+			chk?	[logic!]
 	][
 		#if debug? = yes [if verbose > 0 [print-line "string/trim"]]
 
+		chk?: ownership/check as red-value! str words/_trim null str/head 0
 		case [
 			any [all? OPTION?(with-arg)] [trim-with str with-arg]
 			auto? [--NOT_IMPLEMENTED--]
 			lines? [trim-lines str]
 			true  [trim-head-tail str head? tail?]
 		]
-		ownership/check as red-value! str words/_trim null str/head 0
+		if chk? [ownership/check as red-value! str words/_trimmed null str/head 0]
 		as red-series! str
 	]
 
@@ -2766,12 +2766,9 @@ string: context [
 				]
 				added: added + 1
 			][
-				either any [
-					type = TYPE_STRING				;@@ replace with ANY_STRING?
-					type = TYPE_FILE 
-					type = TYPE_URL
-					type = TYPE_TAG
-					type = TYPE_EMAIL
+				either all [
+					ANY_STRING?(type)
+					type <> TYPE_TAG				;-- preserve angle brackets
 				][
 					form-buf: as red-string! cell
 				][

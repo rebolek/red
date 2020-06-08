@@ -28,6 +28,7 @@ object [
 
 	top:		1								;-- index of the first visible line in the line buffer
 	line:		none							;-- current editing line
+	line-pos:	0								;-- current editing line's position in lines
 	pos:		0								;-- insert position of the current editing line
 
 	scroll-y:	0								;-- in pixels
@@ -131,7 +132,7 @@ object [
 		either s [
 			cnt: 0
 			until [
-				add-line copy/part str s
+				add-lines copy/part str s no
 				str: skip s 1
 				cnt: cnt + 1
 				if cnt = 100 [
@@ -140,17 +141,15 @@ object [
 				]
 				not s: find str lf
 			]
-			either all [lf? not prin?][add-line copy str][vprin str]
+			either all [lf? not prin?][add-lines str yes][vprin str]
 		][
-			either all [lf? not prin?][add-line copy str][
+			either all [lf? not prin?][add-lines str yes][
 				if first-prin? [add-line make string! 8]
 				vprin str
 			]
 		]
 		prin?: not lf?
-		if system/console/running? [
-			system/view/platform/redraw console
-		]
+		system/view/platform/redraw console
 		()				;-- return unset!
 	]
 
@@ -197,6 +196,20 @@ object [
 			append flags 0
 			full?: max-lines = length? lines
 			calc-top
+		]
+	]
+
+	add-lines: function [str [string!] copy? [logic!]][
+		cols: system/console/size/x
+		either 30 * cols > length? str [
+			if copy? [str: copy str]
+			add-line str
+		][												;-- split very long string
+			until [
+				add-line copy/part str cols				;-- TBD use slice! to avoid copying
+				str: skip str cols
+				empty? str
+			]
 		]
 	]
 
@@ -277,7 +290,7 @@ object [
 
 	adjust-console-size: function [size [pair!]][
 		cols: to integer! size/x - 20 - pad-left / char-width		;-- -20 compensates for scrollbar
-		rows: size/y / line-h
+		rows: to-integer size/y / line-h
 		system/console/size: as-pair cols rows
 	]
 
@@ -287,7 +300,7 @@ object [
 		new-size/y: y + line-h
 		box/size: new-size
 		if scroller [
-			page-cnt: y / line-h
+			page-cnt: to-integer y / line-h
 			scroller/page-size: page-cnt
 			scroller/max-size: line-cnt - 1 + page-cnt
 			scroller/position: scroller/position
@@ -510,7 +523,7 @@ object [
 
 		n: top
 		either delta > 0 [						;-- scroll up
-			delta: delta + (scroll-y / line-h + pick nlines n)
+			delta: delta + (to-integer scroll-y / line-h + pick nlines n)
 			scroll-y: 0
 			until [
 				cnt: pick nlines n
@@ -527,7 +540,7 @@ object [
 			if zero? n [n: 1 scroll-y: 0]
 		][										;-- scroll down
 			len: length? lines
-			delta: scroll-y / line-h + delta
+			delta: to-integer scroll-y / line-h + delta
 			scroll-y: 0
 			until [
 				cnt: pick nlines n
@@ -691,11 +704,7 @@ object [
 		p-idx: index? str
 		candidates: red-complete-ctx/complete-input skip str pos yes
 		case [
-			empty? candidates [
-				insert skip str pos char
-				pos: pos + 1
-				clear redo-stack
-			]
+			empty? candidates [0]		;-- TBD: beep
 			1 = length? candidates [
 				clear head str
 				pos: (index? candidates/1) - p-idx
@@ -831,6 +840,11 @@ object [
 
 	press-key: func [event [event!] /local char ctrl? shift?][
 		unless ask? [exit]
+		if line-pos <> length? lines [
+			poke lines line-pos copy head line
+			add-line head line
+			line-pos: length? lines
+		]
 		if ime-open? [
 			remove/part skip line ime-pos pos - ime-pos
 			pos: ime-pos
@@ -963,7 +977,7 @@ object [
 			if y > end [break]
 		]
 		line-y: y - h
-		screen-cnt: y / line-h
+		screen-cnt: to-integer y / line-h
 		if screen-cnt > page-cnt [screen-cnt: page-cnt]
 		update-caret
 		update-scroller line-cnt - num

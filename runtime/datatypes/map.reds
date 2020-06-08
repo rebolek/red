@@ -34,11 +34,7 @@ map: context [
 			TYPE_SET_WORD
 			TYPE_LIT_WORD [key/header: TYPE_SET_WORD]		;-- convert any-word! to set-word!
 			TYPE_BINARY
-			TYPE_STRING
-			TYPE_FILE
-			TYPE_URL
-			TYPE_TAG
-			TYPE_EMAIL	 [_series/copy as red-series! key as red-series! key null yes null]
+			TYPE_ANY_STRING [_series/copy as red-series! key as red-series! key null yes null]
 			TYPE_INTEGER TYPE_CHAR TYPE_FLOAT TYPE_DATE
 			TYPE_PERCENT TYPE_TUPLE TYPE_PAIR TYPE_TIME [0]
 			default		[fire [TO_ERROR(script invalid-type) datatype/push TYPE_OF(key)]]
@@ -187,7 +183,7 @@ map: context [
 		if blk = null [blk: block/make-at as red-block! slot size]
 		table: _hashtable/init size blk HASH_TABLE_MAP 1
 		map: as red-hash! slot
-		map/header: TYPE_MAP							;-- implicit reset of all header flags
+		set-type slot TYPE_MAP
 		map/table: table
 		map
 	]
