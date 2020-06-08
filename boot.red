@@ -51,6 +51,9 @@ Red [
 	][
 		append any [attempt [to-red-file get-env "HOME"] %/tmp] %/.red/
 	]
+
+	;-- custom stuff
+	#include %custom.red
 ]
 
 ;-- command-line arguments processing
