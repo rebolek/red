@@ -2638,6 +2638,17 @@ b}
 	; --test-- "#2133"
 		; OPEN
 
+	--test-- "#2134"
+		--assert "0:09:00" = form 00:09:00
+		--assert "0:01:00" = form 00:00:01 * 60
+		t2134: 0:00:00 loop 60 [t2134: t2134 + 1]
+		--assert "0:01:00" = form t2134
+		--assert "0:00:00"        = form 0:00:01 / 10000000
+		--assert "0:00:00.000001" = form 0:00:01 / 1000000
+		--assert "0:00:00.00001"  = form 0:00:01 / 100000
+		--assert "0:00:00.0001"   = form 0:00:01 / 10000
+		--assert "0:00:00.001"    = form 0:00:01 / 1000
+
 	--test-- "#2136"
 		blk2136: copy []
 		insert/dup blk2136 0 3
@@ -2801,6 +2812,10 @@ b}
 			unset [spec3362-1 spec3362-2]
 		]
 
+	--test-- "3669"
+		--assert not equal? <a> <a^>
+		--assert equal?     <a> load {<a^>}
+
 	--test-- "#3739"
 		reactor3739: func [spec] [make deep-reactor! spec]
 		s3739: reactor3739 [started: no]
@@ -2863,6 +2878,28 @@ comment {
 		all-equal?4205: anded4205 = last-random4205
 		--assert not all-equal?4205
 		unset [anded4205 last-random4205 all-equal?4205]
+
+
+	--test-- "#4505"
+		do [
+			saved: :find
+			find find: [1000] 1000
+			--assert find = [1000]
+			find: :saved
+
+		  	test: func [a b] [append a b]
+		  	test test: [10 20 30] 40
+		  	--assert true 			;-- just check it does not crash
+
+			recycle/off
+			b: reduce [o: object []]
+			s0: stats
+			loop 1000000 [pick b 1]
+			--assert stats < (s0 * 2)  ;-- catches memory leaking
+			recycle/on
+			recycle
+		]
+
 ===end-group===
 
 ~~~end-file~~~

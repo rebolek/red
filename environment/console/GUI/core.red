@@ -131,7 +131,12 @@ object [
 		s: find str lf
 		either s [
 			cnt: 0
-			until [
+			unless all [lf? not prin?][
+				vprin copy/part str s
+				str: skip s 1
+				s: find str lf
+			]
+			while [s][
 				add-lines copy/part str s no
 				str: skip s 1
 				cnt: cnt + 1
@@ -139,9 +144,9 @@ object [
 					refresh
 					cnt: 0
 				]
-				not s: find str lf
+				s: find str lf
 			]
-			either all [lf? not prin?][add-lines str yes][vprin str]
+			add-lines str yes
 		][
 			either all [lf? not prin?][add-lines str yes][
 				if first-prin? [add-line make string! 8]
@@ -335,16 +340,18 @@ object [
 
 	zoom: func [event /local ft sz][
 		box/line-spacing: none
-		ft: box/font
-		sz: ft/size
-		either event/picked > 0 [sz: sz + 1][sz: sz - 1]
-		if sz = 5 [exit]		;-- mininum size
-		ft/size: sz
+		either object? event [ft: event][
+			ft: box/font
+			sz: ft/size
+			either event/picked > 0 [sz: sz + 1][sz: sz - 1]
+			if sz = 5 [exit]		;-- mininum size
+			ft/size: sz
+		]
 		update-cfg ft none
 	]
 
 	update-caret: func [/local len n s h lh offset][
-		unless line [exit]
+		unless all [line mouse-up?][exit]
 		n: top
 		h: 0
 		len: length? skip lines top
@@ -404,6 +411,8 @@ object [
 
 		offset-to-line event/offset
 		mouse-to-caret event/offset
+		caret/rate: none
+		caret/enabled?: no
 	]
 
 	mouse-up: func [event [event!]][
@@ -411,7 +420,10 @@ object [
 		if empty? lines [exit]
 		mouse-up?: yes
 		if 2 = length? selects [clear selects]
+		caret/enabled?: yes
+		mouse-to-caret event/offset
 		system/view/platform/redraw console
+		caret/rate: 2
 	]
 
 	mouse-move: func [offset /local y][
@@ -444,7 +456,6 @@ object [
 	select-to-offset: func [offset][
 		clear skip selects 2
 		offset-to-line offset
-		mouse-to-caret offset
 		system/view/platform/redraw console
 	]
 
@@ -719,6 +730,7 @@ object [
 				pos: (index? candidates/1) - p-idx
 				append str head candidates/1
 				add-line head line
+				line-pos: length? lines
 			]
 		]
 		clear selects
@@ -823,6 +835,7 @@ object [
 		line-y:		0
 		line-cnt:	0
 		screen-cnt: 0
+		line-pos:	1
 		clear lines
 		clear nlines
 		clear heights
