@@ -52,7 +52,7 @@ Red [
 	]
 
 	;-- custom stuff
-	#include %custom.red
+;	#include %custom.red
 ]
 
 ;-- command-line arguments processing

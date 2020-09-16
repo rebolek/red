@@ -43,7 +43,7 @@ gui-console-ctx: context [
 	cfg-dir:	none
 	cfg-path:	none
 	cfg:		none
-	font:		make font! [name: "Consolas" size: 11 color: 0.0.0]
+	font:		make font! [name: "Iosevka Term Medium" size: 16 color: 0.0.0]
 	caret-clr:	0.0.0.1
 	scroller:	make scroller! []
 
