@@ -1424,6 +1424,22 @@ Red [
 		    load word! datatype! 1 c
 		]
 
+	--test-- "tt-31"
+		clear logs
+		--assert [] == transcode/trace ";-- comment" :lex-logger
+		--assert logs = [
+			prescan comment word! 1 1x12 
+			scan comment word! 1 1x12
+		]
+
+	--test-- "tt-32"
+		clear logs
+		--assert [] == transcode/trace %%{"dd^}%% :lex-logger
+		--assert logs = [
+			prescan error! datatype! 1 1x5
+			error string! datatype! 1 1x5
+		]
+
 ===end-group===
 
 ~~~end-file~~~

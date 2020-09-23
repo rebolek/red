@@ -1066,7 +1066,9 @@ change-text: func [
 		case [
 			type = area [
 				buffer: gtk_text_view_get_buffer widget
+				g_signal_handlers_block_by_func(buffer :area-changed widget)
 				gtk_text_buffer_set_text buffer cstr -1
+				g_signal_handlers_unblock_by_func(buffer :area-changed widget)
 				gtk_text_buffer_get_bounds buffer as handle! start as handle! end
 				update-textview-tag buffer as handle! start as handle! end
 			]
@@ -1183,17 +1185,21 @@ change-selection: func [
 		flt		[float!]
 ][
 	if type <> window [
-		idx: either TYPE_OF(int) = TYPE_INTEGER [int/value - 1][-1]
+		idx: either TYPE_OF(int) = TYPE_INTEGER [either int/value >= 0 [int/value - 1][-1]][-1]
 	]
 	case [
 		any [type = field type = area][
 			sel: as red-pair! int
-			either TYPE_OF(sel) = TYPE_NONE [
-				idx: 0
-				sz:  0
-			][
-				idx: sel/x - 1
-				sz: sel/y - idx						;-- should point past the last selected char
+			switch TYPE_OF(sel) [
+				TYPE_PAIR [
+					idx: sel/x - 1
+					sz: sel/y - idx						;-- should point past the last selected char
+				]
+				TYPE_NONE [
+					idx: 0
+					sz:  0
+				]
+				default [0]
 			]
 			either type = field [
 				gtk_editable_select_region widget idx idx + sz
@@ -1287,7 +1293,7 @@ set-logic-state: func [
 	if check? [
 		flags: get-flags as red-block! (get-face-values widget) + FACE_OBJ_FLAGS
 		tri?:  flags and FACET_FLAGS_TRISTATE <> 0
-		g_signal_handler_block widget check-handler			;-- suppress signal handler
+		g_signal_handlers_block_by_func(widget :button-toggled widget)
 	]
 		
 	type: TYPE_OF(state)
@@ -1306,7 +1312,7 @@ set-logic-state: func [
 	]
 	
 	if check? [
-		g_signal_handler_unblock widget check-handler		;-- resume signal handling
+		g_signal_handlers_unblock_by_func(widget :button-toggled widget)
 	]
 ]
 
