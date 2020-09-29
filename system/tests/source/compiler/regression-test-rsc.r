@@ -22,8 +22,8 @@ compilation-error?: does [true? find qt/comp-output "*** Compilation Error"]
 loading-error: func [value] [found? find qt/comp-output join "*** Loading Error: " value]
 compilation-error: func [value] [found? find qt/comp-output join "*** Compilation Error: " value]
 syntax-error: func [value] [found? find qt/comp-output join "*** Syntax Error: " value]
--test-: :--test--
---test--: func [value] [probe value -test- value]
+; -test-: :--test--
+; --test--: func [value] [probe value -test- value]
 
 ===start-group=== "Red/System regressions #1 - #1000"
 
@@ -1351,6 +1351,27 @@ Red/System []
 probe 1.836E13
 }
 		--assert not found? find qt/output "13.0"
+
+	--test-- "#3662"
+		--compile-this {Red/System [] 1h}				;@@ allow it?
+		--assert loading-error "invalid hex literal"
+		
+		--compile-this {Red/System [] 100000000h}
+		--assert loading-error "invalid hex literal"
+		
+		--compile-and-run-this {
+			Red/System []
+			probe 10h
+			probe 100h
+			probe 1000h
+			probe 10000h
+			probe 100000h
+			probe 1000000h
+			probe 10000000h
+		}
+		--assert equal?
+			load qt/output
+			[16 256 4096 65536 1048576 16777216 268435456]
 
 	--test-- "#2671"
 		--compile-and-run-this {

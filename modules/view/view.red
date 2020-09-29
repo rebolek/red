@@ -283,12 +283,25 @@ on-face-deep-change*: function ["Internal use only" owner word target action new
 							all [owner/options owner/options/default]
 						]
 					]
-					if all [find [text-list drop-list drop-down] owner/type string? target][
-						target: head target
-						index: (index? find/same owner/data target) - 1
-						part: 1
+					either all [word = 'data find [text-list drop-list drop-down] owner/type][
+						if string? target [
+							target: head target
+							index: (index? find/same owner/data target) - 1
+							part: 1
+						]
+						if any [
+							string? target
+							all [
+								block? target
+								same? (head owner/data) (head target)
+								not find [insert append cleared removed taken] action
+							]
+						][
+							system/view/platform/on-change-facet owner word target action new index part
+						]	
+					][
+						system/view/platform/on-change-facet owner word target action new index part
 					]
-					system/view/platform/on-change-facet owner word target action new index part
 				]
 			]
 			system/reactivity/check/only owner word
@@ -472,6 +485,7 @@ face!: object [				;-- keep in sync with facet! enum
 	]
 	
 	on-deep-change*: function [owner word target action new index part][
+		if unset? :new [new: none]
 		on-face-deep-change* owner word target action new index part state no
 	]
 ]
@@ -926,9 +940,10 @@ make-face: func [
 	unless spec [blk: []]
 	opts: svv/opts-proto
 	css: make block! 2
-	spec: svv/fetch-options/no-skip face opts model blk css no
+	reactors: make block! 4
+	spec: svv/fetch-options/no-skip face opts model blk css reactors no
 	if model/init [do bind model/init 'face]
-	svv/process-reactors
+	svv/process-reactors reactors
 
 	if offset [face/offset: xy]
 	if size [face/size: wh]

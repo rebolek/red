@@ -405,7 +405,7 @@ red: context [
 	]
 	
 	emit-push-word: func [name [any-word!] original [any-word!] /local type ctx obj][
-		type: to word! form type? name
+		type: to word! form type? :name
 		name: to word! :name
 		
 		either all [
@@ -1461,7 +1461,7 @@ red: context [
 		]
 		pos: tail output
 		
-		if path/1 = last obj-stack [remove path]		;-- remove temp object prefix inserted by object-access?
+		if all [1 <> length? obj-stack path/1 = last obj-stack][remove path]		;-- remove temp object prefix inserted by object-access? (mind #4567!)
 		
 		if set? [
 			emit [object/path-parent/header: TYPE_NONE]
@@ -1844,11 +1844,11 @@ red: context [
 					insert-lf -3
 				]
 				path! set-path!	[
-					idx: do make-block
 					case [
 						inactive [
-							either get-word? pc/1/1 [
+							either get-word? pc/1/1 [	;-- R2 doesn't have get-path!
 								emit 'get-path/push
+								pc/1/1: to word! pc/1/1
 							][
 								emit to path! reduce [to word! form type? pc/1 'push]
 								if path? pc/1 [emit [as red-path!]]
@@ -1863,6 +1863,7 @@ red: context [
 							if path? pc/1 [emit [as red-path!]]
 						]
 					]
+					idx: do make-block
 					emit reduce ['get-root idx]
 					insert-lf -3
 				]
