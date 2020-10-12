@@ -182,9 +182,9 @@ object: context [
 			][
 				get-values as red-object! value
 			]
-			
-			unless only? [									;-- pre-check of unset values
-				i: 0
+
+			i: 0
+			if all [not only? not some?][					;-- pre-check of unset values
 				while [word < tail2][
 					if all [not any? TYPE_OF(values2) = TYPE_UNSET][
 						fire [TO_ERROR(script need-value) word]
@@ -378,6 +378,18 @@ object: context [
 			field
 			stack/top - 1
 			stack/top - 2
+	]
+	
+	loc-ctx-fire-on-set*: func [						;-- compiled code entry point
+		parent-ctx [node!]
+		field      [red-word!]
+		/local
+			s	[series!]
+			obj	[red-value!]
+	][
+		s: as series! parent-ctx/value
+		obj: as red-value! s/offset + 1
+		loc-fire-on-set* obj field
 	]
 	
 	fire-on-set*: func [								;-- compiled code entry point

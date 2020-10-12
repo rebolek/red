@@ -560,7 +560,7 @@ natives: context [
 					interpreter/eval-path arg arg arg + 1 no no no no
 				]
 				TYPE_STRING [
-					lexer/scan-alt arg as red-string! arg -1 no yes yes no null null as red-string! arg
+					lexer/scan-alt arg as red-string! arg -1 no yes yes no null null null
 					DO_EVAL_BLOCK
 				]
 				TYPE_URL 
@@ -1865,11 +1865,13 @@ natives: context [
 		check? [logic!]
 		/local
 			value  [red-value!]
+			type   [integer!]
 			result [red-logic!]
 	][
 		#typecheck value?
 		value: stack/arguments
-		if TYPE_OF(value) = TYPE_WORD [
+		type: TYPE_OF(value)
+		if ANY_WORD?(type) [
 			value: _context/get as red-word! stack/arguments
 		]
 		result: as red-logic! stack/arguments
@@ -2482,6 +2484,12 @@ natives: context [
 			n	[integer!]
 	][
 		#typecheck [now year month day time zone _date weekday yearday precise utc]
+		if all [
+			any [time = -1 precise = -1]													;-- not /time/precise both
+			year + month + day + time + zone + _date + weekday + yearday + precise >= -7 	;-- (-9 + 2) - 2 refs at once
+		][
+			fire [TO_ERROR(script bad-refines)]
+		]
 
 		dt: as red-date! stack/arguments
 		dt/header: TYPE_DATE
@@ -2769,9 +2777,9 @@ natives: context [
 			next? one? all? scan? load? [logic!]
 			slot arg [red-value!]
 			bin	bin2 [red-binary!]
+			blk	out  [red-block!]
 			int	  [red-integer!]
 			str	  [red-string!]
-			blk	  [red-block!]
 			dt	  [red-datatype!]
 			fun	  [red-function!]
 			s	  [series!]
@@ -2789,6 +2797,7 @@ natives: context [
 			s/tail: s/offset + 2
 			slot: s/offset
 		]
+		out: either into < 0 [null][stack/arguments + into]
 		offset: 0
 		len: -1
 		bin: as red-binary! stack/arguments
@@ -2819,11 +2828,11 @@ natives: context [
 		one?: any [next? not all? not load?]
 		either type = TYPE_BINARY [
 			if len < 0 [len: binary/rs-length? bin]
-			type: lexer/scan slot binary/rs-head bin len one? scan? load? no :offset fun as red-series! bin
+			type: lexer/scan slot binary/rs-head bin len one? scan? load? no :offset fun as red-series! bin out
 		][
 			str: as red-string! bin
 			if len < 0 [len: string/rs-length? str]
-			type: lexer/scan-alt slot str len one? scan? load? no :offset fun as red-series! str
+			type: lexer/scan-alt slot str len one? scan? load? no :offset fun out
 		]
 		
 		if any [not scan? not load?][
@@ -2840,7 +2849,7 @@ natives: context [
 			bin/head: bin/head + offset
 			slot: as red-value! blk
 		]
-		stack/set-last slot
+		either null? out [stack/set-last slot][stack/set-last as red-value! out]
 	]
 
 	;--- Natives helper functions ---

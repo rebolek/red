@@ -207,7 +207,7 @@ parser: context [
 		s: GET_BUFFER(input)
 		buf: (as byte-ptr! s/offset) + input/head
 		size: as-integer (as byte-ptr! s/tail) - buf
-		type: lexer/scan null buf size yes yes no no :len null null
+		type: lexer/scan null buf size yes yes no no :len null null null
 		
 		match?: either dt-type = TYPE_TYPESET [BS_TEST_BIT_ALT(dt type)][type = dt/value]
 		if match? [_series/rs-skip as red-series! input len - 1] ;-- -1 to account for later rs-skip
@@ -1709,7 +1709,6 @@ parser: context [
 									copy-cell as red-value! input base 	;@@ remove once OPTION? fixed
 									input/head: new/head
 									PARSE_SAVE_SERIES
-									if TYPE_OF(value) = TYPE_WORD [value: _context/get as red-word! value]
 									actions/change input value base as-logic max null
 									if s-top <> null [stack/top: s-top]
 									PARSE_RESTORE_SERIES
