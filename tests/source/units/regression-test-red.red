@@ -733,10 +733,11 @@ Red [
 	--test-- "#647"
 		--assert error? try [load "type? quote '1" ]
 
-	; --test-- "#650"
-		; FIXME: still a bug, crashes test
-	;	f: func [/1]
-	;	probe f/1
+	--test-- "#650"
+		do [								;-- interpreter only, compiler case is in compiler regression tests.
+			f650: func [/1][none]
+			--assert error? try [f650/1]
+		]
 
 	--test-- "#651"
 		--assert equal? [1 []] load "1[]"
@@ -3051,7 +3052,21 @@ comment {
 	
 	--test-- "#4522"
 		--assert error? try [find/skip [1] [1] ()]
-
+	
+	--test-- "#4537"
+		local: "global"
+		--assert "global" == get to word! first spec-of has [foo][]
+		--assert "global" == get to word! first spec-of function [][[foo:]]
+		unset 'local
+		
+		--assert equal?
+			system/words
+			context? to word! to issue! in context [foo: 'bar] 'foo
+		
+		--assert equal?
+			system/words
+			context? to word! to refinement! in context [foo: 'bar] 'foo
+	
 	--test-- "#4563" do [							;@@ #4526
 		--assert error? try [make op! :>>]
 		--assert error? try [make op! make op! func [x y][]]
