@@ -33,6 +33,9 @@ Red [
 
 	#include %environment/reactivity.red				;-- requires SET intrinsic
 	#include %environment/networking.red
+
+	#include %environment/schemes/GPIO.red
+
 	#include %utils/preprocessor.r
 
 	;-- temporary code --

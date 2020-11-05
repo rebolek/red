@@ -171,6 +171,16 @@ RPi [
 	base-address: 32768					; 8000h
 	dynamic-linker: "/lib/ld-linux-armhf.so.3"
 ]
+RPi-zero [
+	OS:			'Linux
+	format:		'ELF
+	target:		'ARM
+	ABI:		'hard-float
+	type:		'exe
+	cpu-version: 5.0
+	base-address: 32768					; 8000h
+	dynamic-linker: "/lib/ld-linux-armhf.so.3"
+]
 RPi-GTK [
 	OS:			'Linux
 	format:		'ELF
