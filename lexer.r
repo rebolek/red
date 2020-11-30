@@ -238,6 +238,7 @@ lexer: context [
 	get-word-rule: [
 		#":" (type: get-word!) s: begin-symbol-rule [
 			path-rule (
+				if set-path? :value [throw-error]
 				value/1: to get-word! value/1		;-- workaround missing get-path! in R2
 			)
 			| (
@@ -251,10 +252,13 @@ lexer: context [
 		#"'" (type: word!) [
 			s: some #"/" e: (type: lit-word! value: copy/part s e)
 			| s: begin-symbol-rule [
-				path-rule (type: lit-path!)				;-- path matched
+				path-rule (
+					if set-path? :value [throw-error]
+					type: lit-path!					;-- path matched
+				)
 				| (
 					type: lit-word!
-					value: copy/part s e				;-- word matched
+					value: copy/part s e			;-- word matched
 				)
 			]
 		][s: #":" :s (throw-error) | none]
@@ -427,8 +431,11 @@ lexer: context [
 					value2: to pair! reduce [value 0]
 				)
 				[s: integer-number-rule | (type: pair! throw-error)]
-				mark: [pair-end | ws-no-count | end | (type: pair! throw-error)] :mark
-				(value2/2: load-number copy/part s e value: value2)
+				mark: [pair-end | ws-no-count | end | (type: pair! throw-error)] :mark (
+					value2/2: load-number copy/part s e
+					if any [decimal? value decimal? value2][type: pair! throw-error]
+					value: value2
+				)
 			]
 			e: opt [#":" [time-rule | (unless in-path? [throw-error]) :e]]
 	]

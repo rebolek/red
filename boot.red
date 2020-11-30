@@ -30,16 +30,14 @@ Red [
 	#include %environment/codecs/GIF.red
 	#include %environment/codecs/JSON.red
 	#include %environment/codecs/CSV.red
+	#include %environment/codecs/redbin.red
 
 	#include %environment/reactivity.red				;-- requires SET intrinsic
 	#include %environment/networking.red
 	#include %utils/preprocessor.r
 
 	;-- temporary code --
-	#if any [
-		not find [Windows macOS Linux] config/OS
-		all [config/OS = 'Linux not find config/modules 'view]
-	][
+	#if not find [Windows macOS Linux] config/OS [
 		unset [event! image!]
 		image?: func ["Returns true if the value is this type" value [any-type!]][false]
 	]

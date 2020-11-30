@@ -140,6 +140,7 @@
 	red/integer/get-any*
 	red/integer/get*
 	red/integer/get
+	red/integer/make-at
 	red/integer/form-signed
 	red/logic/get
 	red/float/get
@@ -404,7 +405,6 @@
 	red/string/make-at
 	red/unicode/load-utf8-buffer
 	red/ownership/bind
-	red/integer/make-at
 	red/string/load
 	red/set-type
 	red/unicode/load-utf8-stream

@@ -373,6 +373,8 @@ Red/System [
 	#define S_IROTH		4
 
 	#define	DT_DIR		#"^(04)"
+	#define S_IFDIR		4000h
+	#define S_IFREG		8000h
 	
 	#case [
 		any [OS = 'FreeBSD OS = 'macOS OS = 'NetBSD] [
@@ -385,13 +387,18 @@ Red/System [
 			
 			#define DIRENT_NAME_OFFSET 8
 		]
-		true [
+		true [	;-- Linux
 			#define O_CREAT		64
 			#define O_EXCL		128
 			#define O_TRUNC		512
 			#define O_APPEND	1024
 			#define	O_NONBLOCK	2048
 			#define	O_CLOEXEC	524288
+			#either target = 'ARM [
+				#define O_DIRECTORY 4000h
+			][
+				#define O_DIRECTORY 00010000h
+			]
 		]
 	]
 	

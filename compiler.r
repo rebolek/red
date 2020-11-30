@@ -61,6 +61,7 @@ red: context [
 	sym-table:	   make block! 1000
 	literals:	   make block! 1000
 	declarations:  make block! 1000
+	boot-extras:   make block! 100
 	bodies:		   make block! 1000
 	ssa-names: 	   make block! 10						;-- unique names lookup table (SSA form)
 	types-cache:   make hash!  100						;-- store compiled typesets [types array name...]
@@ -258,7 +259,8 @@ red: context [
 		case [
 			pos: find extracts/currencies code [index? pos]
 			all [currencies pos: find currencies code][(index? pos) + length? extracts/currencies]
-			'else [0]
+			code = '... [0]
+			'else [throw-error ["unknown money! currency" code ", add it to the Currencies: header."]]
 		]
 	]
 	
@@ -1107,6 +1109,7 @@ red: context [
 			any [
 				word! 		(return no)
 				| lit-word! (return yes)
+				| get-word! (return yes)
 				| /local	(return no)
 				| skip
 			]
@@ -1204,6 +1207,7 @@ red: context [
 		][
 			pos/1: none
 		]
+		true
 	]
 	
 	check-func-name: func [name [word!] /local new pos][
@@ -2469,13 +2473,15 @@ red: context [
 		]
 		foreach idx [-2 -5 -7 -8][insert-lf idx]
 		emit-stack-reset
-		
+
+		emit [integer/push 0]		
 		emit-open-frame 'repeat
 		emit compose/deep [
 			while [
 				;-- set word 1 + get word
 				;-- TBD: set word next get word
-				(set-cnt) (cnt) + 1
+				(set-cnt) 1 + integer/get stack/arguments - 1	;-- fixes #3361
+				integer/make-at stack/arguments - 1 (cnt)
 				;-- (get word) < value
 				;-- TBD: not tail? get word
 				(cnt) <= (lim)
@@ -2489,6 +2495,7 @@ red: context [
 		pop-call
 		insert last output reduce [action name cnt]
 		new-line last output on
+		emit [copy-cell stack/arguments stack/arguments - 1]	;-- override the counter with the body result
 		emit-close-frame
 		emit-close-frame
 		depth: depth - 1
@@ -3773,6 +3780,7 @@ red: context [
 			all [
 				any [word? pc/1 all [path? pc/1 not get-word? pc/1/1]]
 				do take-frame
+				any [not find [object context construct] pc/1 check-redefined name original]
 				defer: dispatch-ctx-keywords/with original pc/1
 			][]
 			'else [
@@ -3891,6 +3899,7 @@ red: context [
 					pc: back pc
 					throw-error ["undefined word" pc/1]
 				][
+					add-symbol to word! first back pc
 					do emit-word
 				]
 			]
@@ -4608,6 +4617,7 @@ red: context [
 		unless job/red-help? [clear-docstrings pc]
 		booting?: yes
 		comp-block
+		append output boot-extras
 		booting?: no
 		
 		mods: tail output
@@ -4828,6 +4838,11 @@ red: context [
 				if any [not word? c 3 <> length? form c][
 					throw-error ["invalid header currencies field:" spec]
 				]
+				append boot-extras compose [
+					block/rs-append 
+						as red-block! #get system/locale/currencies/list
+						as red-value! word/load (uppercase mold c)
+				]
 			]
 			currencies: copy spec
 		]
@@ -4895,6 +4910,7 @@ red: context [
 		clear sym-table
 		clear literals
 		clear declarations
+		clear boot-extras
 		clear bodies
 		clear actions
 		clear op-actions

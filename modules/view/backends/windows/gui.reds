@@ -59,6 +59,7 @@ hScreen:		as handle! 0
 hInstance:		as handle! 0
 default-font:	as handle! 0
 hover-saved:	as handle! 0							;-- last window under mouse cursor
+prev-focus:		as handle! 0
 version-info: 	declare OSVERSIONINFO
 current-msg: 	as tagMSG 0
 wc-extra:		80										;-- reserve 64 bytes for win32 internal usage (arbitrary)
@@ -323,8 +324,8 @@ get-text-size: func [
 	size/height: as integer! ceil as float! bbox/height
 
 	if pair <> null [
-		pair/x: as integer! ceil as float! bbox/width  * 100 / dpi-factor
-		pair/y: as integer! ceil as float! bbox/height * 100 / dpi-factor
+		pair/x: as integer! ceil as float! bbox/width  * (as float32! 100) / (as float32! dpi-factor)
+		pair/y: as integer! ceil as float! bbox/height * (as float32! 100) / (as float32! dpi-factor)
 	]
 
 	size
@@ -1431,7 +1432,7 @@ OS-make-view: func [
 		]
 		sym = drop-down [
 			class: #u16 "RedCombo"
-			flags: flags or CBS_DROPDOWN or CBS_HASSTRINGS ;or WS_OVERLAPPED
+			flags: flags or CBS_DROPDOWN or CBS_HASSTRINGS or CBS_AUTOHSCROLL ;or WS_OVERLAPPED
 		]
 		sym = drop-list [
 			class: #u16 "RedCombo"
